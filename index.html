@@ -200,15 +200,15 @@
     }
     .health-card .h-count { font-size: 2rem; font-weight: 800; line-height: 1; }
     .health-card .h-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
-    .health-card.behind .h-count { color: var(--red); }
-    .health-card.on-track .h-count { color: var(--green); }
-    .health-card.ahead .h-count { color: var(--blue); }
     .health-card { cursor: pointer; transition: filter 0.15s, border-color 0.15s; }
     .health-card:hover { filter: brightness(1.15); }
-    .health-card.active-filter { border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
-    .health-card.behind.active-filter  { border-color: var(--red); }
+    .health-card.active-filter { box-shadow: 0 0 0 2px currentColor inset; }
+    .health-card.behind.active-filter   { border-color: var(--red); }
+    .health-card.at-risk.active-filter  { border-color: var(--orange); }
     .health-card.on-track.active-filter { border-color: var(--green); }
-    .health-card.ahead.active-filter   { border-color: var(--blue); }
+    .health-card.behind .h-count  { color: var(--red); }
+    .health-card.at-risk .h-count { color: var(--orange); }
+    .health-card.on-track .h-count { color: var(--green); }
 
     .wo-list { display: flex; flex-direction: column; gap: 6px; }
     .wo-row {
@@ -599,31 +599,29 @@
       const today = new Date();
       today.setHours(0,0,0,0);
 
-      let behind = [], onTrack = [], ahead = [];
+      let behind = [], atRisk = [], onTrack = [];
 
       records.forEach(r => {
         const f = r.fields;
         const scheduled = f['Scheduled Completion Date'];
-        const pct = f['% Complete'] || 0;
+        const pct = (f['% Complete'] || 0) * 100;
         if (!scheduled) return;
 
         const schedDate = new Date(scheduled);
         schedDate.setHours(0,0,0,0);
         const daysLeft = Math.round((schedDate - today) / 86400000);
 
-        // Rough health: if due in past and not 100%, behind
-        // If pct > expected based on time, ahead
-        if (daysLeft < 0 && pct < 100) {
+        if (daysLeft < 0) {
           behind.push({ ...f, daysLeft });
-        } else if (daysLeft >= 0 && pct >= Math.max(0, Math.round((1 - daysLeft/14) * 100))) {
-          ahead.push({ ...f, daysLeft });
+        } else if (daysLeft <= 14 && pct < 50) {
+          atRisk.push({ ...f, daysLeft });
         } else {
           onTrack.push({ ...f, daysLeft });
         }
       });
 
       // Store for click filtering
-      window._scheduleData = { behind, onTrack, ahead };
+      window._scheduleData = { behind, atRisk, onTrack };
       window._activeFilter = 'behind';
 
       const renderWOs = (list, accentColor) => {
@@ -631,7 +629,7 @@
         return list.map(f => `
           <div class="wo-row" style="--row-accent:${accentColor}">
             <div class="wo-name">${f['Name'] || f['Work Order Number'] || '–'}</div>
-            <div class="wo-pct">${Math.round(f['% Complete'] || 0)}%</div>
+            <div class="wo-pct">${Math.round((f['% Complete'] || 0) * 100)}%</div>
             <div class="wo-date ${f.daysLeft < 0 ? 'overdue' : ''}">
               ${f.daysLeft < 0 ? `${Math.abs(f.daysLeft)}d late` : `Due ${fmtDate(f['Scheduled Completion Date'])}`}
             </div>
@@ -643,13 +641,13 @@
         document.querySelectorAll('.health-card').forEach(c => c.classList.remove('active-filter'));
         const woList = document.getElementById('woFilteredList');
         if (!window._activeFilter) { woList.innerHTML = ''; return; }
-        document.querySelector(`.health-card.${window._activeFilter === 'onTrack' ? 'on-track' : window._activeFilter}`)
-          ?.classList.add('active-filter');
-        const { list, color } = window._activeFilter === 'behind'
-          ? { list: window._scheduleData.behind,  color: 'var(--red)'   }
-          : window._activeFilter === 'onTrack'
-          ? { list: window._scheduleData.onTrack, color: 'var(--green)' }
-          : { list: window._scheduleData.ahead,   color: 'var(--blue)'  };
+        const cssClass = type === 'onTrack' ? 'on-track' : type === 'atRisk' ? 'at-risk' : type;
+        document.querySelector(`.health-card.${cssClass}`)?.classList.add('active-filter');
+        const { list, color } = type === 'behind'
+          ? { list: window._scheduleData.behind,  color: 'var(--red)'    }
+          : type === 'atRisk'
+          ? { list: window._scheduleData.atRisk,  color: 'var(--orange)' }
+          : { list: window._scheduleData.onTrack, color: 'var(--green)'  };
         woList.innerHTML = `<div class="wo-list">${renderWOs(list, color)}</div>`;
       };
 
@@ -659,13 +657,13 @@
             <div class="h-count">${behind.length}</div>
             <div class="h-label">Behind</div>
           </div>
+          <div class="health-card at-risk" onclick="filterSchedule('atRisk')">
+            <div class="h-count">${atRisk.length}</div>
+            <div class="h-label">At Risk</div>
+          </div>
           <div class="health-card on-track" onclick="filterSchedule('onTrack')">
             <div class="h-count">${onTrack.length}</div>
             <div class="h-label">On Track</div>
-          </div>
-          <div class="health-card ahead" onclick="filterSchedule('ahead')">
-            <div class="h-count">${ahead.length}</div>
-            <div class="h-label">Ahead</div>
           </div>
         </div>
         <div id="woFilteredList"></div>
