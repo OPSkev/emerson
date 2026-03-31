@@ -321,6 +321,15 @@
     'Sand/Prep'   : '#a78bfa',
     'Warehouse'   : '#14b8a6',
   };
+  // Dept record ID → display name
+  const DEPT_ID_MAP = {
+    'recVx7ME4yGKYIxu1': 'CNC',
+    'recF0AoJJFbM57rA5': 'Build',
+    'recrb7Qhe5I1plBUn': 'Hardware',
+    'recxg61cepsn2a6F0': 'Paint/Finish',
+    'recTrBo6PlX3R2YAV': 'Sand/Prep',
+    'reckp0orCqklJLb1a': 'Warehouse',
+  };
 
   // ── API helper ──────────────────────────────────────────────
   function buildUrl(baseId, tableId, params = {}) {
@@ -454,47 +463,57 @@
   async function loadShopFloor() {
     const grid = document.getElementById('deptGrid');
     try {
+      const today = new Date().toISOString().slice(0,10);
       const records = await fetchAll(PROD_BASE, T.woSteps, {
-        filterByFormula: `AND({Complete?}=FALSE(), {Parent Status}!="Complete", {Parent Status}!="Delivered")`,
-        fields: ['Name','Step Status(fx)','Current department','Work Order Number','Hard Date','Finish (calc)','Materials Needed','Priority'],
-        maxRecords: '200'
+        filterByFormula: `AND({Step Status(fx)}!="Complete", {Finish (calc)}>="2026-01-01")`,
+        fields: ['Name','Step Status(fx)','Departments','Work Order Number','Finish (calc)','Priority'],
+        maxRecords: 300
       });
 
-      // Group by department
+      // Group by department using linked record IDs
       const byDept = {};
       SHOP_DEPTS.forEach(d => byDept[d] = []);
 
       records.forEach(r => {
-        const dept = r.fields['Current department'];
-        if (dept && byDept[dept] !== undefined) {
-          byDept[dept].push(r);
+        const deptIds = r.fields['Departments'] || [];
+        const deptName = DEPT_ID_MAP[deptIds[0]];
+        if (deptName && byDept[deptName] !== undefined) {
+          byDept[deptName].push(r);
         }
       });
 
       grid.innerHTML = SHOP_DEPTS.map(dept => {
         const steps = byDept[dept];
         const color = DEPT_COLORS[dept] || '#6b7280';
+        // Sort: In Progress first, then by finish date
+        steps.sort((a,b) => {
+          const aIP = (a.fields['Step Status(fx)'] || '').includes('Progress') ? 0 : 1;
+          const bIP = (b.fields['Step Status(fx)'] || '').includes('Progress') ? 0 : 1;
+          if (aIP !== bIP) return aIP - bIP;
+          return (a.fields['Finish (calc)'] || '').localeCompare(b.fields['Finish (calc)'] || '');
+        });
+
         const rows = steps.length === 0
           ? `<div class="dept-empty">No active steps</div>`
-          : steps.slice(0, 8).map(r => {
+          : steps.slice(0, 10).map(r => {
               const f = r.fields;
               const status = f['Step Status(fx)'] || '';
-              const finish = f['Finish (calc)'] || f['Hard Date'];
+              const finish = f['Finish (calc)'];
               const days = daysFromNow(finish);
               const dotClass = status.includes('Progress') ? 'dot-active'
                 : status.includes('Block') ? 'dot-blocked'
-                : status.includes('Scheduled') ? 'dot-scheduled'
                 : 'dot-pending';
               const dateClass = days !== null && days < 0 ? 'overdue' : '';
               const dateText = finish
                 ? (days !== null && days < 0 ? `${Math.abs(days)}d overdue` : fmtDate(finish))
                 : '';
+              const wo = Array.isArray(f['Work Order Number']) ? f['Work Order Number'][0] : (f['Work Order Number'] || '–');
               return `
                 <div class="step-row">
                   <div class="step-status-dot ${dotClass}"></div>
                   <div class="step-info">
-                    <div class="step-wo">${f['Work Order Number'] || '–'}</div>
-                    <div class="step-name">${f['Name'] || '–'}</div>
+                    <div class="step-wo">${wo}</div>
+                    <div class="step-name">${(f['Name'] || '–').split('||')[0].trim()}</div>
                     ${dateText ? `<div class="step-due ${dateClass}">${dateText}</div>` : ''}
                   </div>
                 </div>`;
