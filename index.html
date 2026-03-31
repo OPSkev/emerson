@@ -32,6 +32,65 @@
       padding-bottom: 40px;
     }
 
+    /* ── PAGE LAYOUT ── */
+    .page-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .main-col { flex: 1; min-width: 0; }
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      padding: 20px 16px 40px;
+      position: sticky;
+      top: 56px;
+      max-height: calc(100vh - 56px);
+      overflow-y: auto;
+      border-left: 1px solid var(--border);
+    }
+    @media (max-width: 900px) {
+      .page-wrap { flex-direction: column; }
+      .sidebar { width: 100%; position: static; max-height: none; border-left: none; border-top: 1px solid var(--border); padding-top: 0; }
+    }
+
+    /* ── INSTALL SIDEBAR ── */
+    .install-header {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--teal);
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .install-header::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+
+    .install-section-label {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 16px 0 8px;
+    }
+
+    .install-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .install-card.upcoming { border-left-color: var(--dim); }
+
+    .install-job { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .install-desc { font-size: 0.68rem; color: var(--muted); margin-bottom: 8px; }
+    .install-date { font-size: 0.65rem; color: var(--muted); margin-top: 6px; }
+    .install-date.soon { color: var(--yellow); font-weight: 600; }
+    .install-date.overdue { color: var(--red); font-weight: 600; }
+
+    .install-pct-row { display: flex; align-items: center; gap: 8px; }
+    .install-pct-label { font-size: 0.68rem; font-weight: 700; color: var(--teal); flex-shrink: 0; }
+    .install-bar-wrap { flex: 1; background: var(--dim); border-radius: 4px; height: 5px; overflow: hidden; }
+    .install-bar { height: 100%; border-radius: 4px; background: var(--teal); transition: width 0.4s; }
+
     /* ── HEADER ── */
     .header {
       background: var(--surface);
@@ -273,6 +332,8 @@
   </div>
 </div>
 
+<div class="page-wrap">
+<div class="main-col">
 <div class="main">
 
   <!-- REVENUE -->
@@ -307,7 +368,16 @@
     </a>
   </div>
 
+</div><!-- end .main -->
+</div><!-- end .main-col -->
+
+<!-- INSTALL SIDEBAR -->
+<div class="sidebar">
+  <div class="install-header">Install Tracker</div>
+  <div id="installSidebar"><div class="loading">Loading…</div></div>
 </div>
+
+</div><!-- end .page-wrap -->
 
 <script>
   const PROD_TOKEN  = 'pat0KeG33iHuNNwPm.a4413a9d2618ad3a6656ccbfb52e2d7f28e76b464451e792e5620ab879d8e7c3';
@@ -723,6 +793,57 @@
     }
   }
 
+  // ── INSTALL SIDEBAR ─────────────────────────────────────────
+  async function loadInstall() {
+    const el = document.getElementById('installSidebar');
+    try {
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")))`,
+        fields: ['Name','Work Order Status','% Complete','Scheduled Completion Date','Due Date'],
+        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
+      });
+
+      const inProgress = records.filter(r => r.fields['Work Order Status'] === 'In Progress' || (r.fields['% Complete'] || 0) > 0);
+      const upcoming   = records.filter(r => r.fields['Work Order Status'] === 'Not Started' && (r.fields['% Complete'] || 0) === 0);
+
+      const renderCard = (r, type) => {
+        const f = r.fields;
+        const nameParts = (f['Name'] || '').split('|');
+        const jobName = nameParts[0].trim();
+        const desc = nameParts[2] ? nameParts[2].trim() : '';
+        const pct = Math.round((f['% Complete'] || 0) * 100);
+        const date = f['Scheduled Completion Date'] || f['Due Date'];
+        const days = daysFromNow(date);
+        const dateClass = days === null ? '' : days < 0 ? 'overdue' : days <= 7 ? 'soon' : '';
+        const dateText = date ? (days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `Due ${fmtDate(date)}`) : '';
+
+        return `
+          <div class="install-card ${type}">
+            <div class="install-job">${jobName}</div>
+            <div class="install-desc">${desc}</div>
+            ${type === 'in-progress' ? `
+              <div class="install-pct-row">
+                <span class="install-pct-label">${pct}%</span>
+                <div class="install-bar-wrap"><div class="install-bar" style="width:${pct}%"></div></div>
+              </div>` : ''}
+            ${dateText ? `<div class="install-date ${dateClass}">${dateText}</div>` : ''}
+          </div>`;
+      };
+
+      el.innerHTML = `
+        ${inProgress.length > 0 ? `
+          <div class="install-section-label">In Progress</div>
+          ${inProgress.map(r => renderCard(r, 'in-progress')).join('')}` : ''}
+        ${upcoming.length > 0 ? `
+          <div class="install-section-label">Upcoming</div>
+          ${upcoming.map(r => renderCard(r, 'upcoming')).join('')}` : ''}
+        ${inProgress.length === 0 && upcoming.length === 0 ? '<div class="dept-empty">No active installs</div>' : ''}
+      `;
+    } catch(e) {
+      el.innerHTML = `<div class="error-msg">Install failed: ${e.message}</div>`;
+    }
+  }
+
   // ── TOGGLE DEPT ──────────────────────────────────────────────
   function toggleDept(header) {
     header.closest('.dept-card').classList.toggle('open');
@@ -747,6 +868,7 @@
       loadShopFloor(),
       loadMaterials(),
       loadScheduleHealth(),
+      loadInstall(),
     ]);
 
     const now = new Date();
