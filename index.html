@@ -323,6 +323,7 @@
     poSync        : 'tbl2r44LCU06ldiBi',
     matRequests   : 'tblatfWe6zHOZkRnr',
   };
+  // Revenue uses workOrders table (Billed? + Billed Complete Date)
 
   const SHOP_DEPTS = ['CNC', 'Build', 'Hardware', 'Paint/Finish', 'Sand/Prep', 'Warehouse'];
   const DEPT_COLORS = {
@@ -420,21 +421,21 @@
       const monthStart = `${year}-${String(now.getMonth() + 1).padStart(2,'0')}-01`;
       const monthName = now.toLocaleDateString('en-US', { month: 'long' });
 
-      const records = await fetchAll(PROD_BASE, T.earnedRev, {
-        filterByFormula: `AND(IS_AFTER({Created}, "${monthStart}"), {Category Grouped}="Cabinetry")`,
-        fields: ['$ Earned Today', 'Category', 'Created']
+      const monthEnd = `${year}-${String(now.getMonth() + 1).padStart(2,'0')}-31`;
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND({Billed?}="Yes",IS_AFTER({Billed Complete Date},"${new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0,10)}"),{Billed Complete Date}<="${monthEnd}")`,
+        fields: ['Pre-Tax Revenue', 'Category', 'Billed Complete Date']
       });
 
       let custom = 0, brokered = 0, install = 0;
 
       records.forEach(r => {
         const f = r.fields;
-        const amt = f['$ Earned Today'] || 0;
-        const cats = Array.isArray(f['Category']) ? f['Category'] : [f['Category'] || ''];
-        const catStr = cats.join(',');
-        if (catStr.includes('Install'))   install   += amt;
-        else if (catStr.includes('Brokerage')) brokered += amt;
-        else                               custom    += amt;
+        const amt = f['Pre-Tax Revenue'] || 0;
+        const cats = Array.isArray(f['Category']) ? f['Category'].join(',') : (f['Category'] || '');
+        if (cats.includes('Install'))                           install  += amt;
+        else if (cats.includes('Cabinet Brokerage') || cats.includes('Brokerage')) brokered += amt;
+        else                                                    custom   += amt;
       });
 
       const total = custom + brokered + install;
