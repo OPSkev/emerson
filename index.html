@@ -611,9 +611,13 @@
         schedDate.setHours(0,0,0,0);
         const daysLeft = Math.round((schedDate - today) / 86400000);
 
+        const isAtRisk = (daysLeft === 0 && pct < 100)
+          || (daysLeft >= 1 && daysLeft <= 7  && pct < 75)
+          || (daysLeft >= 8 && daysLeft <= 14 && pct < 50);
+
         if (daysLeft < 0) {
           behind.push({ ...f, daysLeft });
-        } else if (daysLeft <= 14 && pct < 50) {
+        } else if (isAtRisk) {
           atRisk.push({ ...f, daysLeft });
         } else {
           onTrack.push({ ...f, daysLeft });
