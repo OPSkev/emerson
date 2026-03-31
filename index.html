@@ -398,36 +398,34 @@
   async function loadRevenue() {
     const strip = document.getElementById('revenueStrip');
     try {
-      const week = currentWeekNum();
-      const year = currentYear();
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthStart = `${year}-${String(now.getMonth() + 1).padStart(2,'0')}-01`;
+      const today = now.toISOString().slice(0,10);
 
-      // Last 4 weeks of goal data
+      // Get all weeks in current month
       const records = await fetchAll(PROD_BASE, T.earnedRevGoal, {
-        filterByFormula: `AND({Year}=${year}, {Week}>=${week - 3}, {Week}<=${week})`,
+        filterByFormula: `AND({Year}=${year}, {Week}>="${monthStart}", {Week}<="${today}")`,
         sort: [{ field: 'Week', direction: 'desc' }]
       });
-
-      // MTD = sum actual for weeks in current month
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       let mtdActual = 0, mtdGoal = 0;
       let weekActual = 0, weekGoal = 0;
 
-      records.forEach(r => {
+      records.forEach((r, i) => {
         const f = r.fields;
-        const w = f['Week'];
-        if (w === week) {
+        mtdActual += f['Actual'] || 0;
+        mtdGoal   += f['Goal']   || 0;
+        if (i === 0) {  // most recent week
           weekActual = f['Actual'] || 0;
           weekGoal   = f['Goal']   || 0;
         }
-        mtdActual += f['Actual'] || 0;
-        mtdGoal   += f['Goal']   || 0;
       });
 
       const mtdPct  = mtdGoal  > 0 ? Math.round((mtdActual  / mtdGoal)  * 100) : 0;
       const wkPct   = weekGoal > 0 ? Math.round((weekActual / weekGoal) * 100) : 0;
       const pctColor = (p) => p >= 90 ? 'green' : p >= 70 ? 'yellow' : 'red';
+      const monthName = now.toLocaleDateString('en-US', { month: 'long' });
 
       strip.innerHTML = `
         <div class="rev-card highlight">
@@ -441,7 +439,7 @@
         <div class="rev-card">
           <div class="label">MTD %</div>
           <div class="value ${pctColor(mtdPct)}">${mtdPct}%</div>
-          <div class="sub">of monthly goal</div>
+          <div class="sub">of ${monthName} goal</div>
         </div>
         <div class="rev-card">
           <div class="label">This Week</div>
@@ -449,9 +447,9 @@
           <div class="sub">vs ${fmt$(weekGoal)} goal</div>
         </div>
         <div class="rev-card">
-          <div class="label">Wk ${week} %</div>
+          <div class="label">Week %</div>
           <div class="value ${pctColor(wkPct)}">${wkPct}%</div>
-          <div class="sub">week ${week} of ${year}</div>
+          <div class="sub">${monthName} ${year}</div>
         </div>
       `;
     } catch (e) {
