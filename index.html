@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emerson — Command Center</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1f2e;
+      --surface2: #222840;
+      --border: rgba(255,255,255,0.08);
+      --text: #e5e7eb;
+      --muted: #6b7280;
+      --dim: #374151;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --orange: #f97316;
+      --teal: #14b8a6;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+    .logo span { color: var(--blue); }
+    .tagline { font-size: 0.65rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .last-updated { font-size: 0.65rem; color: var(--muted); }
+    .refresh-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); padding: 6px 12px; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--dim); }
+    .refresh-btn.spinning { opacity: 0.6; pointer-events: none; }
+
+    /* ── LAYOUT ── */
+    .main { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+    /* ── SECTION HEADERS ── */
+    .section-label {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 24px 0 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── REVENUE STRIP ── */
+    .revenue-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    @media (max-width: 600px) { .revenue-strip { grid-template-columns: repeat(2, 1fr); } }
+
+    .rev-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .rev-card .label { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .rev-card .value { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .rev-card .sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+    .rev-card.highlight { border-color: var(--blue); }
+    .rev-card .value.green { color: var(--green); }
+    .rev-card .value.yellow { color: var(--yellow); }
+    .rev-card .value.red { color: var(--red); }
+
+    .progress-bar-wrap { margin-top: 8px; background: var(--dim); border-radius: 4px; height: 4px; overflow: hidden; }
+    .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .progress-bar.green { background: var(--green); }
+    .progress-bar.yellow { background: var(--yellow); }
+    .progress-bar.red { background: var(--red); }
+
+    /* ── DEPT CARDS ── */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 500px) { .dept-grid { grid-template-columns: 1fr; } }
+
+    .dept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .dept-header {
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-left: 3px solid var(--accent, var(--blue));
+      cursor: pointer;
+    }
+    .dept-header:hover { background: var(--surface2); }
+    .dept-name { font-size: 0.85rem; font-weight: 700; }
+    .dept-meta { display: flex; align-items: center; gap: 8px; }
+    .dept-count {
+      font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; background: var(--surface2); color: var(--muted);
+    }
+    .dept-chevron { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; }
+    .dept-card.open .dept-chevron { transform: rotate(180deg); }
+
+    .dept-body { display: none; border-top: 1px solid var(--border); }
+    .dept-card.open .dept-body { display: block; }
+
+    .step-row {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 5px;
+    }
+    .dot-active { background: var(--green); }
+    .dot-pending { background: var(--yellow); }
+    .dot-blocked { background: var(--red); }
+    .dot-scheduled { background: var(--blue); }
+
+    .step-info { flex: 1; min-width: 0; }
+    .step-wo { font-size: 0.68rem; color: var(--muted); margin-bottom: 2px; }
+    .step-name { font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .step-due { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+    .step-due.overdue { color: var(--red); font-weight: 600; }
+
+    .dept-empty { padding: 16px 14px; font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+    /* ── POs / MATERIALS ── */
+    .po-list { display: flex; flex-direction: column; gap: 8px; }
+    .po-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .po-status-badge {
+      font-size: 0.6rem; font-weight: 700; padding: 3px 8px;
+      border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+    }
+    .badge-ordered   { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb44; }
+    .badge-partial   { background: #3d2e00; color: #fbbf24; border: 1px solid #d9770644; }
+    .badge-confirmed { background: #052e16; color: #4ade80; border: 1px solid #16a34a44; }
+    .badge-pending   { background: #2d1b00; color: #fb923c; border: 1px solid #ea580c44; }
+    .badge-other     { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    .po-info { flex: 1; min-width: 0; }
+    .po-job { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .po-vendor { font-size: 0.65rem; color: var(--muted); }
+    .po-eta { font-size: 0.65rem; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .po-eta.soon { color: var(--yellow); font-weight: 600; }
+    .po-eta.overdue { color: var(--red); font-weight: 600; }
+
+    /* ── SCHEDULE HEALTH ── */
+    .health-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .health-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .health-card .h-count { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .health-card .h-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .health-card.behind .h-count { color: var(--red); }
+    .health-card.on-track .h-count { color: var(--green); }
+    .health-card.ahead .h-count { color: var(--blue); }
+    .health-card { cursor: pointer; transition: filter 0.15s, border-color 0.15s; }
+    .health-card:hover { filter: brightness(1.15); }
+    .health-card.active-filter { border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
+    .health-card.behind.active-filter  { border-color: var(--red); }
+    .health-card.on-track.active-filter { border-color: var(--green); }
+    .health-card.ahead.active-filter   { border-color: var(--blue); }
+
+    .wo-list { display: flex; flex-direction: column; gap: 6px; }
+    .wo-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--row-accent, var(--border));
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .wo-name { flex: 1; font-size: 0.8rem; font-weight: 600; color: var(--text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wo-pct { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+    .wo-date { font-size: 0.65rem; color: var(--muted); flex-shrink: 0; text-align: right; }
+    .wo-date.overdue { color: var(--red); font-weight: 600; }
+
+    /* ── CRM LINK ── */
+    .crm-link-wrap { margin-top: 8px; }
+    .crm-link {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .crm-link:hover { background: var(--surface2); border-color: var(--blue); }
+    .crm-link .arrow { color: var(--blue); font-size: 1rem; }
+
+    /* ── LOADING / ERROR ── */
+    .loading { text-align: center; padding: 24px; color: var(--muted); font-size: 0.8rem; }
+    .error-msg { text-align: center; padding: 16px; color: var(--red); font-size: 0.78rem; background: #2e0a0a; border-radius: 8px; border: 1px solid #ef444433; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">EMER<span>SON</span></div>
+      <div class="tagline">EF San Juan · Cabinetry</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">–</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- REVENUE -->
+  <div class="section-label">Revenue</div>
+  <div class="revenue-strip" id="revenueStrip">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- SHOP FLOOR -->
+  <div class="section-label">Shop Floor</div>
+  <div class="dept-grid" id="deptGrid">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- MATERIALS & POs -->
+  <div class="section-label">Materials &amp; POs</div>
+  <div class="po-list" id="poList">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- SCHEDULE HEALTH -->
+  <div class="section-label">Schedule Health</div>
+  <div id="scheduleHealth">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- CRM LINK -->
+  <div class="section-label">Pipeline &amp; Pre-Production</div>
+  <div class="crm-link-wrap">
+    <a class="crm-link" href="https://airtable.com/app29rBmk81P2idlq/pagkQ3VfsSRbMILGM" target="_blank">
+      Open CRM Dashboard <span class="arrow">→</span>
+    </a>
+  </div>
+
+</div>
+
+<script>
+  const PROD_TOKEN  = 'pat0KeG33iHuNNwPm.a4413a9d2618ad3a6656ccbfb52e2d7f28e76b464451e792e5620ab879d8e7c3';
+  const PROD_BASE   = 'appqIXms8VnRTFv3b';
+  const CRM_BASE    = 'app29rBmk81P2idlq';
+
+  // Table IDs
+  const T = {
+    earnedRevGoal : 'tblZTSZC4IE5Si9re',
+    earnedRev     : 'tblXOB0e6wqUrvLCH',
+    woSteps       : 'tblmPU2hWwIvbrD5V',
+    workOrders    : 'tblHuJKm0Sd3MDtzc',
+    poSync        : 'tbl2r44LCU06ldiBi',
+    matRequests   : 'tblatfWe6zHOZkRnr',
+  };
+
+  const SHOP_DEPTS = ['CNC', 'Build', 'Hardware', 'Paint/Finish', 'Sand/Prep', 'Warehouse'];
+  const DEPT_COLORS = {
+    'CNC'         : '#3b82f6',
+    'Build'       : '#22c55e',
+    'Hardware'    : '#f97316',
+    'Paint/Finish': '#ec4899',
+    'Sand/Prep'   : '#a78bfa',
+    'Warehouse'   : '#14b8a6',
+  };
+
+  // ── API helper ──────────────────────────────────────────────
+  function buildUrl(baseId, tableId, params = {}) {
+    const url = new URL(`https://api.airtable.com/v0/${baseId}/${tableId}`);
+    Object.entries(params).forEach(([k, v]) => {
+      if (k === 'fields' && Array.isArray(v)) {
+        v.forEach(f => url.searchParams.append('fields[]', f));
+      } else if (k === 'sort' && Array.isArray(v)) {
+        v.forEach((s, i) => {
+          url.searchParams.append(`sort[${i}][field]`, s.field);
+          url.searchParams.append(`sort[${i}][direction]`, s.direction);
+        });
+      } else {
+        url.searchParams.set(k, v);
+      }
+    });
+    return url;
+  }
+
+  async function fetchAirtable(baseId, tableId, params = {}) {
+    const url = buildUrl(baseId, tableId, params);
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${PROD_TOKEN}` }
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`${res.status}: ${txt.slice(0,120)}`);
+    }
+    return res.json();
+  }
+
+  async function fetchAll(baseId, tableId, params = {}) {
+    let records = [], offset = null;
+    do {
+      const p = { ...params, ...(offset ? { offset } : {}) };
+      const data = await fetchAirtable(baseId, tableId, p);
+      records = records.concat(data.records || []);
+      offset = data.offset || null;
+    } while (offset);
+    return records;
+  }
+
+  // ── Formatters ───────────────────────────────────────────────
+  function fmt$(n) {
+    if (!n && n !== 0) return '–';
+    return '$' + Math.round(n).toLocaleString();
+  }
+  function fmtDate(d) {
+    if (!d) return '–';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function daysFromNow(d) {
+    if (!d) return null;
+    const diff = new Date(d) - new Date();
+    return Math.round(diff / 86400000);
+  }
+  function currentWeekNum() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    return Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+  }
+  function currentYear() { return new Date().getFullYear(); }
+
+  // ── REVENUE ─────────────────────────────────────────────────
+  async function loadRevenue() {
+    const strip = document.getElementById('revenueStrip');
+    try {
+      const week = currentWeekNum();
+      const year = currentYear();
+
+      // Last 4 weeks of goal data
+      const records = await fetchAll(PROD_BASE, T.earnedRevGoal, {
+        filterByFormula: `AND({Year}=${year}, {Week}>=${week - 3}, {Week}<=${week})`,
+        sort: [{ field: 'Week', direction: 'desc' }]
+      });
+
+      // MTD = sum actual for weeks in current month
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      let mtdActual = 0, mtdGoal = 0;
+      let weekActual = 0, weekGoal = 0;
+
+      records.forEach(r => {
+        const f = r.fields;
+        const w = f['Week'];
+        if (w === week) {
+          weekActual = f['Actual'] || 0;
+          weekGoal   = f['Goal']   || 0;
+        }
+        mtdActual += f['Actual'] || 0;
+        mtdGoal   += f['Goal']   || 0;
+      });
+
+      const mtdPct  = mtdGoal  > 0 ? Math.round((mtdActual  / mtdGoal)  * 100) : 0;
+      const wkPct   = weekGoal > 0 ? Math.round((weekActual / weekGoal) * 100) : 0;
+      const pctColor = (p) => p >= 90 ? 'green' : p >= 70 ? 'yellow' : 'red';
+
+      strip.innerHTML = `
+        <div class="rev-card highlight">
+          <div class="label">MTD Earned</div>
+          <div class="value">${fmt$(mtdActual)}</div>
+          <div class="sub">vs ${fmt$(mtdGoal)} goal</div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar ${pctColor(mtdPct)}" style="width:${Math.min(mtdPct,100)}%"></div>
+          </div>
+        </div>
+        <div class="rev-card">
+          <div class="label">MTD %</div>
+          <div class="value ${pctColor(mtdPct)}">${mtdPct}%</div>
+          <div class="sub">of monthly goal</div>
+        </div>
+        <div class="rev-card">
+          <div class="label">This Week</div>
+          <div class="value">${fmt$(weekActual)}</div>
+          <div class="sub">vs ${fmt$(weekGoal)} goal</div>
+        </div>
+        <div class="rev-card">
+          <div class="label">Wk ${week} %</div>
+          <div class="value ${pctColor(wkPct)}">${wkPct}%</div>
+          <div class="sub">week ${week} of ${year}</div>
+        </div>
+      `;
+    } catch (e) {
+      strip.innerHTML = `<div class="error-msg">Revenue failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── SHOP FLOOR ───────────────────────────────────────────────
+  async function loadShopFloor() {
+    const grid = document.getElementById('deptGrid');
+    try {
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Complete?}=FALSE(), {Parent Status}!="Complete", {Parent Status}!="Delivered")`,
+        fields: ['Name','Step Status(fx)','Current department','Work Order Number','Hard Date','Finish (calc)','Materials Needed','Priority'],
+        maxRecords: '200'
+      });
+
+      // Group by department
+      const byDept = {};
+      SHOP_DEPTS.forEach(d => byDept[d] = []);
+
+      records.forEach(r => {
+        const dept = r.fields['Current department'];
+        if (dept && byDept[dept] !== undefined) {
+          byDept[dept].push(r);
+        }
+      });
+
+      grid.innerHTML = SHOP_DEPTS.map(dept => {
+        const steps = byDept[dept];
+        const color = DEPT_COLORS[dept] || '#6b7280';
+        const rows = steps.length === 0
+          ? `<div class="dept-empty">No active steps</div>`
+          : steps.slice(0, 8).map(r => {
+              const f = r.fields;
+              const status = f['Step Status(fx)'] || '';
+              const finish = f['Finish (calc)'] || f['Hard Date'];
+              const days = daysFromNow(finish);
+              const dotClass = status.includes('Progress') ? 'dot-active'
+                : status.includes('Block') ? 'dot-blocked'
+                : status.includes('Scheduled') ? 'dot-scheduled'
+                : 'dot-pending';
+              const dateClass = days !== null && days < 0 ? 'overdue' : '';
+              const dateText = finish
+                ? (days !== null && days < 0 ? `${Math.abs(days)}d overdue` : fmtDate(finish))
+                : '';
+              return `
+                <div class="step-row">
+                  <div class="step-status-dot ${dotClass}"></div>
+                  <div class="step-info">
+                    <div class="step-wo">${f['Work Order Number'] || '–'}</div>
+                    <div class="step-name">${f['Name'] || '–'}</div>
+                    ${dateText ? `<div class="step-due ${dateClass}">${dateText}</div>` : ''}
+                  </div>
+                </div>`;
+            }).join('');
+
+        return `
+          <div class="dept-card open" style="">
+            <div class="dept-header" style="border-left-color:${color}" onclick="toggleDept(this)">
+              <span class="dept-name">${dept}</span>
+              <div class="dept-meta">
+                <span class="dept-count">${steps.length}</span>
+                <span class="dept-chevron">▼</span>
+              </div>
+            </div>
+            <div class="dept-body">${rows}</div>
+          </div>`;
+      }).join('');
+
+    } catch (e) {
+      grid.innerHTML = `<div class="error-msg">Shop floor failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── MATERIALS & POs ─────────────────────────────────────────
+  async function loadMaterials() {
+    const list = document.getElementById('poList');
+    try {
+      const records = await fetchAll(PROD_BASE, T.poSync, {
+        filterByFormula: `NOT(OR({PO Status}="Received", {PO Status}="Complete", {PO Status}="Cancelled"))`,
+        fields: ['NEW PO NUM','Job Name','Vendor(s)','PO Status','ETA','Description'],
+        sort: [{ field: 'ETA', direction: 'asc' }],
+        maxRecords: '50'
+      });
+
+      if (records.length === 0) {
+        list.innerHTML = `<div class="loading" style="padding:12px">No open POs</div>`;
+        return;
+      }
+
+      list.innerHTML = records.map(r => {
+        const f = r.fields;
+        const eta = f['ETA'];
+        const days = daysFromNow(eta);
+        const etaClass = days === null ? '' : days < 0 ? 'overdue' : days <= 3 ? 'soon' : '';
+        const etaText = eta
+          ? (days !== null && days < 0 ? `${Math.abs(days)}d late` : `ETA ${fmtDate(eta)}`)
+          : 'No ETA';
+
+        const status = f['PO Status'] || 'Unknown';
+        const badgeClass = status === 'Ordered' ? 'badge-ordered'
+          : status === 'Partially Received' ? 'badge-partial'
+          : status === 'Confirmed' ? 'badge-confirmed'
+          : status === 'Pending' || status === 'Not Ordered' ? 'badge-pending'
+          : 'badge-other';
+
+        const vendor = Array.isArray(f['Vendor(s)']) ? f['Vendor(s)'].join(', ') : (f['Vendor(s)'] || '–');
+
+        return `
+          <div class="po-row">
+            <span class="po-status-badge ${badgeClass}">${status}</span>
+            <div class="po-info">
+              <div class="po-job">${f['Job Name'] || f['NEW PO NUM'] || '–'}</div>
+              <div class="po-vendor">${vendor}</div>
+            </div>
+            <div class="po-eta ${etaClass}">${etaText}</div>
+          </div>`;
+      }).join('');
+
+    } catch (e) {
+      list.innerHTML = `<div class="error-msg">Materials failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── SCHEDULE HEALTH ──────────────────────────────────────────
+  async function loadScheduleHealth() {
+    const container = document.getElementById('scheduleHealth');
+    try {
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),{Scheduled Completion Date}!="",{Hide From CAB Schedule}=FALSE())`,
+        fields: ['Name','Work Order Status','Scheduled Completion Date','% Complete','Work Order Number','Due Date'],
+        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }],
+        maxRecords: 100
+      });
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      let behind = [], onTrack = [], ahead = [];
+
+      records.forEach(r => {
+        const f = r.fields;
+        const scheduled = f['Scheduled Completion Date'];
+        const pct = f['% Complete'] || 0;
+        if (!scheduled) return;
+
+        const schedDate = new Date(scheduled);
+        schedDate.setHours(0,0,0,0);
+        const daysLeft = Math.round((schedDate - today) / 86400000);
+
+        // Rough health: if due in past and not 100%, behind
+        // If pct > expected based on time, ahead
+        if (daysLeft < 0 && pct < 100) {
+          behind.push({ ...f, daysLeft });
+        } else if (daysLeft >= 0 && pct >= Math.max(0, Math.round((1 - daysLeft/14) * 100))) {
+          ahead.push({ ...f, daysLeft });
+        } else {
+          onTrack.push({ ...f, daysLeft });
+        }
+      });
+
+      // Store for click filtering
+      window._scheduleData = { behind, onTrack, ahead };
+      window._activeFilter = 'behind';
+
+      const renderWOs = (list, accentColor) => {
+        if (list.length === 0) return `<div class="dept-empty">None in this category</div>`;
+        return list.map(f => `
+          <div class="wo-row" style="--row-accent:${accentColor}">
+            <div class="wo-name">${f['Name'] || f['Work Order Number'] || '–'}</div>
+            <div class="wo-pct">${Math.round(f['% Complete'] || 0)}%</div>
+            <div class="wo-date ${f.daysLeft < 0 ? 'overdue' : ''}">
+              ${f.daysLeft < 0 ? `${Math.abs(f.daysLeft)}d late` : `Due ${fmtDate(f['Scheduled Completion Date'])}`}
+            </div>
+          </div>`).join('');
+      };
+
+      window.filterSchedule = (type) => {
+        window._activeFilter = window._activeFilter === type ? null : type;
+        document.querySelectorAll('.health-card').forEach(c => c.classList.remove('active-filter'));
+        const woList = document.getElementById('woFilteredList');
+        if (!window._activeFilter) { woList.innerHTML = ''; return; }
+        document.querySelector(`.health-card.${window._activeFilter === 'onTrack' ? 'on-track' : window._activeFilter}`)
+          ?.classList.add('active-filter');
+        const { list, color } = window._activeFilter === 'behind'
+          ? { list: window._scheduleData.behind,  color: 'var(--red)'   }
+          : window._activeFilter === 'onTrack'
+          ? { list: window._scheduleData.onTrack, color: 'var(--green)' }
+          : { list: window._scheduleData.ahead,   color: 'var(--blue)'  };
+        woList.innerHTML = `<div class="wo-list">${renderWOs(list, color)}</div>`;
+      };
+
+      container.innerHTML = `
+        <div class="health-summary">
+          <div class="health-card behind" onclick="filterSchedule('behind')">
+            <div class="h-count">${behind.length}</div>
+            <div class="h-label">Behind</div>
+          </div>
+          <div class="health-card on-track" onclick="filterSchedule('onTrack')">
+            <div class="h-count">${onTrack.length}</div>
+            <div class="h-label">On Track</div>
+          </div>
+          <div class="health-card ahead" onclick="filterSchedule('ahead')">
+            <div class="h-count">${ahead.length}</div>
+            <div class="h-label">Ahead</div>
+          </div>
+        </div>
+        <div id="woFilteredList"></div>
+      `;
+
+      // Default: show behind on load
+      window.filterSchedule('behind');
+
+    } catch (e) {
+      container.innerHTML = `<div class="error-msg">Schedule health failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── TOGGLE DEPT ──────────────────────────────────────────────
+  function toggleDept(header) {
+    header.closest('.dept-card').classList.toggle('open');
+  }
+
+  // ── LOAD ALL ─────────────────────────────────────────────────
+  async function loadAll() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    btn.textContent = '↻ Loading…';
+
+    await Promise.all([
+      loadRevenue(),
+      loadShopFloor(),
+      loadMaterials(),
+      loadScheduleHealth(),
+    ]);
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+    btn.classList.remove('spinning');
+    btn.textContent = '↻ Refresh';
+  }
+
+  // Auto-refresh every 5 minutes
+  loadAll();
+  setInterval(loadAll, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>
