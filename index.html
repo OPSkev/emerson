@@ -158,6 +158,18 @@
 
     .dept-empty { padding: 16px 14px; font-size: 0.78rem; color: var(--muted); font-style: italic; }
 
+    .upcoming-toggle {
+      padding: 8px 14px; font-size: 0.68rem; font-weight: 700; color: var(--muted);
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      border-top: 1px solid var(--border); background: var(--surface2);
+      user-select: none;
+    }
+    .upcoming-toggle:hover { color: var(--text); }
+    .upcoming-toggle .uc { transition: transform 0.2s; display: inline-block; }
+    .upcoming-toggle.open .uc { transform: rotate(180deg); }
+    .upcoming-body { display: none; }
+    .upcoming-body.open { display: block; }
+
     /* ── POs / MATERIALS ── */
     .po-list { display: flex; flex-direction: column; gap: 8px; }
     .po-row {
@@ -491,36 +503,57 @@
           return (a.fields['Finish (calc)'] || '').localeCompare(b.fields['Finish (calc)'] || '');
         });
 
+        // Split into this week vs upcoming
+        const now = new Date();
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() + (6 - now.getDay())); // Sunday
+        weekEnd.setHours(23,59,59,0);
+        const weekEndStr = weekEnd.toISOString().slice(0,10);
+
+        const thisWeek = steps.filter(r => (r.fields['Finish (calc)'] || '') <= weekEndStr);
+        const upcoming = steps.filter(r => (r.fields['Finish (calc)'] || '') > weekEndStr);
+
+        const renderStep = (r) => {
+          const f = r.fields;
+          const status = f['Step Status(fx)'] || '';
+          const finish = f['Finish (calc)'];
+          const days = daysFromNow(finish);
+          const dotClass = status.includes('Progress') ? 'dot-active'
+            : status.includes('Block') ? 'dot-blocked'
+            : 'dot-pending';
+          const dateClass = days !== null && days < 0 ? 'overdue' : '';
+          const dateText = finish
+            ? (days !== null && days < 0 ? `${Math.abs(days)}d overdue` : fmtDate(finish))
+            : '';
+          const nameParts = (f['Name'] || '').split('||');
+          const stepDesc = nameParts[0].trim();
+          const jobParts = nameParts[1] ? nameParts[1].split('|').map(s => s.trim()) : [];
+          const jobName = jobParts[0] || '';
+          const roomName = jobParts[2] || '';
+          return `
+            <div class="step-row">
+              <div class="step-status-dot ${dotClass}"></div>
+              <div class="step-info">
+                <div class="step-wo">${jobName}${roomName ? ` · ${roomName}` : ''}</div>
+                <div class="step-name">${stepDesc || '–'}</div>
+                ${dateText ? `<div class="step-due ${dateClass}">${dateText}</div>` : ''}
+              </div>
+            </div>`;
+        };
+
+        const deptId = dept.replace(/\W/g,'');
         const rows = steps.length === 0
           ? `<div class="dept-empty">No active steps</div>`
-          : steps.slice(0, 10).map(r => {
-              const f = r.fields;
-              const status = f['Step Status(fx)'] || '';
-              const finish = f['Finish (calc)'];
-              const days = daysFromNow(finish);
-              const dotClass = status.includes('Progress') ? 'dot-active'
-                : status.includes('Block') ? 'dot-blocked'
-                : 'dot-pending';
-              const dateClass = days !== null && days < 0 ? 'overdue' : '';
-              const dateText = finish
-                ? (days !== null && days < 0 ? `${Math.abs(days)}d overdue` : fmtDate(finish))
-                : '';
-              const wo = Array.isArray(f['Work Order Number']) ? f['Work Order Number'][0] : (f['Work Order Number'] || '–');
-              const nameParts = (f['Name'] || '').split('||');
-              const stepDesc = nameParts[0].trim();
-              const jobParts = nameParts[1] ? nameParts[1].split('|').map(s => s.trim()) : [];
-              const jobName = jobParts[0] || '';
-              const roomName = jobParts[2] || '';
-              return `
-                <div class="step-row">
-                  <div class="step-status-dot ${dotClass}"></div>
-                  <div class="step-info">
-                    <div class="step-wo">${jobName}${roomName ? ` · ${roomName}` : ''}</div>
-                    <div class="step-name">${stepDesc || '–'}</div>
-                    ${dateText ? `<div class="step-due ${dateClass}">${dateText}</div>` : ''}
-                  </div>
-                </div>`;
-            }).join('');
+          : `
+            ${thisWeek.length > 0 ? thisWeek.map(renderStep).join('') : '<div class="dept-empty">Nothing scheduled this week</div>'}
+            ${upcoming.length > 0 ? `
+              <div class="upcoming-toggle" id="tog-${deptId}" onclick="toggleUpcoming('${deptId}')">
+                <span class="uc">▼</span> ${upcoming.length} upcoming
+              </div>
+              <div class="upcoming-body" id="upb-${deptId}">
+                ${upcoming.map(renderStep).join('')}
+              </div>` : ''}
+          `;
 
         return `
           <div class="dept-card open" style="">
@@ -689,6 +722,14 @@
   // ── TOGGLE DEPT ──────────────────────────────────────────────
   function toggleDept(header) {
     header.closest('.dept-card').classList.toggle('open');
+  }
+
+  // ── TOGGLE UPCOMING ──────────────────────────────────────────
+  function toggleUpcoming(deptId) {
+    const tog = document.getElementById('tog-' + deptId);
+    const body = document.getElementById('upb-' + deptId);
+    tog.classList.toggle('open');
+    body.classList.toggle('open');
   }
 
   // ── LOAD ALL ─────────────────────────────────────────────────
