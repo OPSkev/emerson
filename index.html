@@ -244,6 +244,19 @@
     .upcoming-body { display: none; }
     .upcoming-body.open { display: block; }
 
+    /* ── DEPT REVENUE ROW ── */
+    .dept-rev-row {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .dept-rev-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 100px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .dept-rev-name  { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .dept-rev-amt   { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .dept-rev-steps { font-size: 0.6rem; color: var(--muted); }
+
     /* ── MATERIAL RISK ── */
     .risk-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -422,6 +435,7 @@
   <div class="revenue-strip" id="revenueStrip">
     <div class="loading">Loading…</div>
   </div>
+  <div class="dept-rev-row" id="deptRevRow"></div>
 
   <!-- SCHEDULE HEALTH -->
   <div class="section-label">Schedule Health</div>
@@ -747,6 +761,48 @@
 
     } catch (e) {
       grid.innerHTML = `<div class="error-msg">Shop floor failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── DEPT REVENUE ─────────────────────────────────────────────
+  async function loadDeptRevenue() {
+    const el = document.getElementById('deptRevRow');
+    try {
+      const now = new Date();
+      const monthDue = `${now.getFullYear()}.${now.getMonth() + 1}`;
+
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Step Status(fx)}!="Complete",{Month Due}="${monthDue}")`,
+        fields: ['Departments','Step Unearned Revenue']
+      });
+
+      // Sum unearned revenue by department
+      const deptTotals = {};
+      const deptCounts = {};
+      records.forEach(r => {
+        const f = r.fields;
+        const rev = f['Step Unearned Revenue'] || 0;
+        const depts = Array.isArray(f['Departments']) ? f['Departments'] : [];
+        depts.forEach(dId => {
+          deptTotals[dId] = (deptTotals[dId] || 0) + rev;
+          deptCounts[dId] = (deptCounts[dId] || 0) + 1;
+        });
+      });
+
+      // Render in dept order
+      const deptOrder = Object.keys(DEPT_ID_MAP);
+      const cards = deptOrder
+        .filter(id => deptTotals[id] > 0)
+        .map(id => `
+          <div class="dept-rev-card">
+            <div class="dept-rev-name">${DEPT_ID_MAP[id]}</div>
+            <div class="dept-rev-amt">${fmt$(Math.round(deptTotals[id]))}</div>
+            <div class="dept-rev-steps">${deptCounts[id]} step${deptCounts[id] !== 1 ? 's' : ''}</div>
+          </div>`).join('');
+
+      el.innerHTML = cards || '';
+    } catch(e) {
+      el.innerHTML = `<div class="error-msg">Dept revenue failed: ${e.message}</div>`;
     }
   }
 
@@ -1126,6 +1182,7 @@
 
     await Promise.all([
       loadRevenue(),
+      loadDeptRevenue(),
       loadShopFloor(),
       loadMaterialRisk(),
       loadMaterials(),
