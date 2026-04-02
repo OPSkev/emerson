@@ -13,7 +13,7 @@
       --surface2: #222840;
       --border: rgba(255,255,255,0.08);
       --text: #e5e7eb;
-      --muted: #6b7280;
+      --muted: #9ca3af;
       --dim: #374151;
       --green: #22c55e;
       --yellow: #eab308;
@@ -55,6 +55,20 @@
     }
 
     /* ── INSTALL SIDEBAR ── */
+    .sidebar-rev-card {
+      background: var(--surface);
+      border: 1px solid #2563eb44;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .sidebar-rev-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #60a5fa; margin-bottom: 6px; }
+    .sidebar-rev-value { font-size: 1.6rem; font-weight: 800; color: #60a5fa; line-height: 1; }
+    .sidebar-rev-sub   { font-size: 0.65rem; color: var(--muted); margin-top: 5px; }
+    .sidebar-rev-bar-wrap { background: var(--surface2); border-radius: 4px; height: 4px; margin-top: 10px; overflow: hidden; }
+    .sidebar-rev-bar      { height: 100%; background: #3b82f6; border-radius: 4px; transition: width 0.4s; }
+
     .install-header {
       font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
       text-transform: uppercase; color: var(--teal);
@@ -139,7 +153,8 @@
       gap: 10px;
       margin-bottom: 4px;
     }
-    @media (max-width: 600px) { .revenue-strip { grid-template-columns: repeat(2, 1fr); } }
+    .rev-col { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 700px) { .revenue-strip { grid-template-columns: repeat(2, 1fr); } }
 
     .rev-card {
       background: var(--surface);
@@ -229,31 +244,97 @@
     .upcoming-body { display: none; }
     .upcoming-body.open { display: block; }
 
+    /* ── MATERIAL RISK ── */
+    .risk-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .risk-title {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--red);
+    }
+    .risk-count {
+      font-size: 0.62rem; font-weight: 700; background: #2d0a0a;
+      color: var(--red); border: 1px solid #7f1d1d66;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .risk-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .risk-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .risk-card.amber { border-left-color: var(--yellow); }
+    .risk-card.blue  { border-left-color: #3b82f6; }
+    .risk-card-top   { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 3px; }
+    .risk-card-job   { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .risk-card-due   { font-size: 0.68rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    .risk-card-due.red    { color: var(--red); }
+    .risk-card-due.amber  { color: var(--yellow); }
+    .risk-card-due.blue   { color: #60a5fa; }
+    .risk-card-desc  { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; }
+    .risk-card-po    { font-size: 0.63rem; color: var(--muted); font-style: italic; }
+    .risk-card-badges { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+    .risk-badge {
+      font-size: 0.58rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .risk-badge-notordered  { background: #2d0a0a; color: var(--red); border: 1px solid #7f1d1d66; }
+    .risk-badge-ordered     { background: #2d1f00; color: var(--yellow); border: 1px solid #78350f66; }
+    .risk-badge-partial     { background: #1a2a1a; color: #4ade80; border: 1px solid #16a34a44; }
+    .risk-badge-inbounded   { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb44; }
+
     /* ── POs / MATERIALS ── */
-    .po-list { display: flex; flex-direction: column; gap: 8px; }
-    .po-row {
+    .po-summary-bar {
+      display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .po-summary-chip {
+      padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .po-chip-blocking { background: #2d0a0a; color: var(--red); border: 1px solid #7f1d1d66; }
+    .po-chip-week     { background: #2d1f00; color: var(--yellow); border: 1px solid #78350f66; }
+    .po-chip-ordered  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    .po-group { margin-bottom: 10px; }
+    .po-group-header {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      padding: 6px 0 6px 4px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+    }
+    .po-group-header .pg-label { flex: 1; }
+    .po-group-header .pg-arrow { transition: transform 0.2s; }
+    .po-group-header.collapsed .pg-arrow { transform: rotate(-90deg); }
+    .po-group-body { display: flex; flex-direction: column; gap: 6px; }
+    .po-group-body.hidden { display: none; }
+
+    .po-group-header.blocking { color: var(--red); }
+    .po-group-header.week     { color: var(--yellow); }
+
+    .po-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 12px 14px;
-      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 2px 8px;
     }
-    .po-status-badge {
-      font-size: 0.6rem; font-weight: 700; padding: 3px 8px;
-      border-radius: 20px; white-space: nowrap; flex-shrink: 0;
-    }
-    .badge-ordered   { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb44; }
-    .badge-partial   { background: #3d2e00; color: #fbbf24; border: 1px solid #d9770644; }
-    .badge-confirmed { background: #052e16; color: #4ade80; border: 1px solid #16a34a44; }
-    .badge-pending   { background: #2d1b00; color: #fb923c; border: 1px solid #ea580c44; }
-    .badge-other     { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .po-card.is-blocking { border-left: 3px solid var(--red); }
+    .po-card.is-week     { border-left: 3px solid var(--yellow); }
 
-    .po-info { flex: 1; min-width: 0; }
-    .po-job { font-size: 0.78rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .po-vendor { font-size: 0.65rem; color: var(--muted); }
-    .po-eta { font-size: 0.65rem; color: var(--muted); text-align: right; flex-shrink: 0; }
-    .po-eta.soon { color: var(--yellow); font-weight: 600; }
-    .po-eta.overdue { color: var(--red); font-weight: 600; }
+    .po-card-job   { font-size: 0.78rem; font-weight: 700; color: var(--text); grid-column: 1; }
+    .po-card-desc  { font-size: 0.68rem; color: var(--muted); grid-column: 1; margin-top: 1px; }
+    .po-card-eta   { font-size: 0.7rem; font-weight: 700; text-align: right; grid-row: 1; grid-column: 2; align-self: start; }
+    .po-card-meta  { font-size: 0.72rem; color: var(--muted); text-align: right; grid-row: 2; grid-column: 2; }
+    .po-card-num   { grid-column: 1 / -1; display: block; width: 100%; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary, #94a3b8); letter-spacing: 0.5px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+    .po-card-eta.overdue { color: var(--red); }
+    .po-card-eta.week    { color: var(--yellow); }
+    .po-card-eta.future  { color: var(--muted); }
+    .po-card-eta.noeta   { color: var(--red); }
 
     /* ── SCHEDULE HEALTH ── */
     .health-summary {
@@ -356,6 +437,7 @@
 
   <!-- MATERIALS & POs -->
   <div class="section-label">Materials &amp; POs</div>
+  <div id="matRisk"></div>
   <div class="po-list" id="poList">
     <div class="loading">Loading…</div>
   </div>
@@ -373,6 +455,7 @@
 
 <!-- INSTALL SIDEBAR -->
 <div class="sidebar">
+  <div id="sidebarRev"><div class="loading">Loading…</div></div>
   <div class="install-header">Install Tracker</div>
   <div id="installSidebar"><div class="loading">Loading…</div></div>
 </div>
@@ -488,28 +571,37 @@
     try {
       const now = new Date();
       const year = now.getFullYear();
-      const monthStart = `${year}-${String(now.getMonth() + 1).padStart(2,'0')}-01`;
-      const monthName = now.toLocaleDateString('en-US', { month: 'long' });
+      const monthStr = String(now.getMonth() + 1).padStart(2,'0');
+      const monthStart = `${year}-${monthStr}-01`;
+      const monthEnd   = `${year}-${monthStr}-31`;
+      const monthName  = now.toLocaleDateString('en-US', { month: 'long' });
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0,10);
 
-      const monthEnd = `${year}-${String(now.getMonth() + 1).padStart(2,'0')}-31`;
-      const records = await fetchAll(PROD_BASE, T.workOrders, {
-        filterByFormula: `AND({Billed?}="Yes",IS_AFTER({Billed Complete Date},"${new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0,10)}"),{Billed Complete Date}<="${monthEnd}")`,
+      // Billed MTD
+      const billedRecs = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND({Billed?}="Yes",IS_AFTER({Billed Complete Date},"${prevMonthEnd}"),{Billed Complete Date}<="${monthEnd}")`,
         fields: ['Pre-Tax Revenue', 'Category', 'Billed Complete Date']
       });
 
-      let custom = 0, brokered = 0, install = 0;
+      // Scheduled this month — active WOs with Scheduled Completion Date in current month
+      const scheduledRecs = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),{Scheduled Completion Date}>="${monthStart}",{Scheduled Completion Date}<="${monthEnd}")`,
+        fields: ['Pre-Tax Revenue', 'Scheduled Completion Date']
+      });
 
-      records.forEach(r => {
+      let custom = 0, brokered = 0, install = 0;
+      billedRecs.forEach(r => {
         const f = r.fields;
         const amt = f['Pre-Tax Revenue'] || 0;
         const cats = Array.isArray(f['Category']) ? f['Category'].join(',') : (f['Category'] || '');
-        if (cats.includes('Install'))                           install  += amt;
+        if (cats.includes('Install'))                                              install  += amt;
         else if (cats.includes('Cabinet Brokerage') || cats.includes('Brokerage')) brokered += amt;
-        else                                                    custom   += amt;
+        else                                                                        custom   += amt;
       });
 
-      const total = custom + brokered + install;
-      const pctColor = (p) => p >= 90 ? 'green' : p >= 70 ? 'yellow' : 'red';
+      const scheduled = scheduledRecs.reduce((sum, r) => sum + (r.fields['Pre-Tax Revenue'] || 0), 0);
+      const total     = custom + brokered + install;
+      const pctColor  = (p) => p >= 90 ? 'green' : p >= 70 ? 'yellow' : 'red';
 
       const revCard = (label, actual, goal) => {
         const pct = goal > 0 ? Math.round((actual / goal) * 100) : 0;
@@ -525,13 +617,24 @@
       };
 
       const totalPct = Math.round((total / MONTHLY_GOAL) * 100);
+      const schedPct = Math.round((scheduled / MONTHLY_GOAL) * 100);
       strip.innerHTML = `
-        <div class="rev-card highlight">
-          <div class="label">MTD Total · ${monthName}</div>
-          <div class="value ${pctColor(totalPct)}">${fmt$(total)}</div>
-          <div class="sub">${totalPct}% of ${fmt$(MONTHLY_GOAL)} goal</div>
-          <div class="progress-bar-wrap">
-            <div class="progress-bar ${pctColor(totalPct)}" style="width:${Math.min(totalPct,100)}%"></div>
+        <div class="rev-col">
+          <div class="rev-card highlight">
+            <div class="label">MTD Billed · ${monthName}</div>
+            <div class="value ${pctColor(totalPct)}">${fmt$(total)}</div>
+            <div class="sub">${totalPct}% of ${fmt$(MONTHLY_GOAL)} goal</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar ${pctColor(totalPct)}" style="width:${Math.min(totalPct,100)}%"></div>
+            </div>
+          </div>
+          <div class="rev-card" style="border-color:#2563eb44;">
+            <div class="label" style="color:#60a5fa;">Scheduled · ${monthName}</div>
+            <div class="value" style="color:#60a5fa;">${fmt$(scheduled)}</div>
+            <div class="sub">${scheduledRecs.length} WOs due this month</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" style="width:${Math.min(schedPct,100)}%; background:#3b82f6;"></div>
+            </div>
           </div>
         </div>
         ${revCard('Custom', custom, GOAL_CUSTOM)}
@@ -647,15 +750,93 @@
     }
   }
 
+  // ── MATERIAL RISK ────────────────────────────────────────────
+  async function loadMaterialRisk() {
+    const el = document.getElementById('matRisk');
+    try {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const in30  = new Date(today); in30.setDate(today.getDate() + 30);
+      const todayStr = today.toISOString().slice(0,10);
+      const in30Str  = in30.toISOString().slice(0,10);
+
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),NOT({Material Received }),{Scheduled Completion Date}>="${todayStr}",{Scheduled Completion Date}<="${in30Str}")`,
+        fields: ['Name','Work Order Status','Scheduled Completion Date','% Complete','PO Status','PO Details','Materials Ordered ','Material Received '],
+        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
+      });
+
+      if (records.length === 0) { el.innerHTML = ''; return; }
+
+      const cards = records.map(r => {
+        const f    = r.fields;
+        const nameParts = (f['Name'] || '').split('|');
+        const job  = nameParts[0].trim();
+        const desc = nameParts[2] ? nameParts[2].trim() : (nameParts[1] ? nameParts[1].trim() : '');
+        const days = daysFromNow(f['Scheduled Completion Date']);
+
+        const dueClass  = days <= 7 ? 'red' : days <= 14 ? 'amber' : 'blue';
+        const cardClass = days <= 7 ? '' : days <= 14 ? 'amber' : 'blue';
+        const dueLabel  = days === 0 ? 'Due today'
+          : days < 0  ? `${Math.abs(days)}d overdue`
+          : `${days}d · ${fmtDate(f['Scheduled Completion Date'])}`;
+
+        const ordered  = f['Materials Ordered '];
+        const poStatus = Array.isArray(f['PO Status']) ? f['PO Status'] : (f['PO Status'] ? [f['PO Status']] : []);
+        const poLines = (f['PO Details'] || '').split('\n').filter(l => l.trim());
+        const poNums  = poLines.map(l => l.split(':')[0].trim()).filter(Boolean).join(', ');
+        const poDetail = poLines.map(l => {
+          const parts = l.split('|');
+          if (parts.length >= 3) {
+            const vendor = parts[0].split(':')[1]?.trim() || parts[0].trim();
+            return `${vendor} — ${parts[2].trim()}`;
+          }
+          return l.trim();
+        }).join('; ');
+
+        const badges = poStatus.map(s => {
+          const s2 = s.toLowerCase();
+          const cls = s2.includes('not ord') || s2 === 'assigned' || s2 === 'pending' ? 'risk-badge-notordered'
+            : s2.includes('partial') ? 'risk-badge-partial'
+            : s2.includes('inbound') ? 'risk-badge-inbounded'
+            : 'risk-badge-ordered';
+          return `<span class="risk-badge ${cls}">${s}</span>`;
+        });
+        if (!ordered) badges.unshift(`<span class="risk-badge risk-badge-notordered">Not Ordered</span>`);
+
+        return `
+          <div class="risk-card ${cardClass}">
+            <div class="risk-card-top">
+              <div class="risk-card-job">${job}</div>
+              <div class="risk-card-due ${dueClass}">${dueLabel}</div>
+            </div>
+            <div class="risk-card-desc">${desc}</div>
+            ${poDetail ? `<div class="risk-card-po">${poDetail}</div>` : ''}
+            <div class="risk-card-badges">${badges.join('')}</div>
+            ${poNums ? `<div class="po-card-num">${poNums}</div>` : ''}
+          </div>`;
+      }).join('');
+
+      el.innerHTML = `
+        <div class="risk-header">
+          <span class="risk-title">⚠ Material Risk</span>
+          <span class="risk-count">${records.length} WO${records.length !== 1 ? 's' : ''} at risk</span>
+        </div>
+        <div class="risk-list">${cards}</div>`;
+
+    } catch(e) {
+      el.innerHTML = `<div class="error-msg">Material risk failed: ${e.message}</div>`;
+    }
+  }
+
   // ── MATERIALS & POs ─────────────────────────────────────────
   async function loadMaterials() {
     const list = document.getElementById('poList');
     try {
       const records = await fetchAll(PROD_BASE, T.poSync, {
         filterByFormula: `NOT(OR({PO Status}="Received", {PO Status}="Complete", {PO Status}="Cancelled"))`,
-        fields: ['NEW PO NUM','Job Name','Vendor(s)','PO Status','ETA','Description'],
+        fields: ['NEW PO NUM','Job Name','Vendor(s)','PO Status','ETA','Description','Total Cost'],
         sort: [{ field: 'ETA', direction: 'asc' }],
-        maxRecords: '50'
+        maxRecords: '100'
       });
 
       if (records.length === 0) {
@@ -663,38 +844,92 @@
         return;
       }
 
-      list.innerHTML = records.map(r => {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const in7 = new Date(today); in7.setDate(today.getDate() + 7);
+
+      const blocking = [], thisWeek = [], upcoming = [];
+
+      records.forEach(r => {
         const f = r.fields;
-        const eta = f['ETA'];
-        const days = daysFromNow(eta);
-        const etaClass = days === null ? '' : days < 0 ? 'overdue' : days <= 3 ? 'soon' : '';
-        const etaText = eta
-          ? (days !== null && days < 0 ? `${Math.abs(days)}d late` : `ETA ${fmtDate(eta)}`)
-          : 'No ETA';
+        const eta = f['ETA'] ? new Date(f['ETA'] + 'T00:00:00') : null;
+        const days = eta ? Math.round((eta - today) / 86400000) : null;
+        const bucket = (days === null || days < 0) ? 'blocking'
+          : days <= 7 ? 'week' : 'future';
+        const entry = { f, days, eta };
+        if (bucket === 'blocking') blocking.push(entry);
+        else if (bucket === 'week')  thisWeek.push(entry);
+        else                          upcoming.push(entry);
+      });
 
-        const status = f['PO Status'] || 'Unknown';
-        const badgeClass = status === 'Ordered' ? 'badge-ordered'
-          : status === 'Partially Received' ? 'badge-partial'
-          : status === 'Confirmed' ? 'badge-confirmed'
-          : status === 'Pending' || status === 'Not Ordered' ? 'badge-pending'
-          : 'badge-other';
+      function renderCard(entry) {
+        const { f, days } = entry;
+        const job     = f['Job Name'] || f['NEW PO NUM'] || '–';
+        const desc    = f['Description'] || '';
+        const status  = f['PO Status'] || '–';
+        const vendor  = Array.isArray(f['Vendor(s)']) ? f['Vendor(s)'].join(', ') : (f['Vendor(s)'] || '–');
+        const cost    = f['Total Cost'] ? '$' + Number(f['Total Cost']).toLocaleString('en-US', {maximumFractionDigits:0}) : '';
 
-        const vendor = Array.isArray(f['Vendor(s)']) ? f['Vendor(s)'].join(', ') : (f['Vendor(s)'] || '–');
+        let etaLabel, etaClass, cardClass = '';
+        if (days === null)     { etaLabel = 'No ETA';                etaClass = 'noeta'; cardClass = 'is-blocking'; }
+        else if (days < 0)     { etaLabel = `${Math.abs(days)}d late`; etaClass = 'overdue'; cardClass = 'is-blocking'; }
+        else if (days === 0)   { etaLabel = 'Today';                 etaClass = 'week'; cardClass = 'is-week'; }
+        else if (days <= 7)    { etaLabel = `${days}d`;              etaClass = 'week'; cardClass = 'is-week'; }
+        else                   { etaLabel = fmtDate(f['ETA']);       etaClass = 'future'; }
+
+        const poNum = f['NEW PO NUM'] || '';
+        const metaParts = [status];
+        if (vendor !== '–') metaParts.push(vendor);
+        if (cost) metaParts.push(cost);
 
         return `
-          <div class="po-row">
-            <span class="po-status-badge ${badgeClass}">${status}</span>
-            <div class="po-info">
-              <div class="po-job">${f['Job Name'] || f['NEW PO NUM'] || '–'}</div>
-              <div class="po-vendor">${vendor}</div>
-            </div>
-            <div class="po-eta ${etaClass}">${etaText}</div>
+          <div class="po-card ${cardClass}">
+            <div class="po-card-job">${job}</div>
+            <div class="po-card-eta ${etaClass}">${etaLabel}</div>
+            <div class="po-card-desc">${desc || '&nbsp;'}</div>
+            <div class="po-card-meta">${metaParts.join(' · ')}</div>
+            ${poNum ? `<div class="po-card-num">${poNum}</div>` : ''}
           </div>`;
-      }).join('');
+      }
+
+      function renderGroup(label, items, cssClass, startCollapsed) {
+        if (items.length === 0) return '';
+        const collapseClass = startCollapsed ? 'collapsed' : '';
+        const bodyClass     = startCollapsed ? 'hidden' : '';
+        const id = 'pg-' + cssClass;
+        return `
+          <div class="po-group">
+            <div class="po-group-header ${cssClass} ${collapseClass}" onclick="togglePoGroup('${id}',this)">
+              <span class="pg-label">${label} (${items.length})</span>
+              <span class="pg-arrow">▾</span>
+            </div>
+            <div class="po-group-body ${bodyClass}" id="${id}">
+              ${items.map(renderCard).join('')}
+            </div>
+          </div>`;
+      }
+
+      const summaryBar = `
+        <div class="po-summary-bar">
+          ${blocking.length ? `<div class="po-summary-chip po-chip-blocking">● ${blocking.length} needs attention</div>` : ''}
+          ${thisWeek.length ? `<div class="po-summary-chip po-chip-week">● ${thisWeek.length} arriving this week</div>` : ''}
+          ${upcoming.length ? `<div class="po-summary-chip po-chip-ordered">● ${upcoming.length} ordered</div>` : ''}
+        </div>`;
+
+      list.innerHTML = summaryBar
+        + renderGroup('Needs Attention — Overdue or No ETA', blocking, 'blocking', false)
+        + renderGroup('Arriving This Week', thisWeek, 'week', false)
+        + renderGroup('Ordered / Upcoming', upcoming, 'ordered', true);
 
     } catch (e) {
       list.innerHTML = `<div class="error-msg">Materials failed to load: ${e.message}</div>`;
     }
+  }
+
+  function togglePoGroup(id, header) {
+    const body = document.getElementById(id);
+    if (!body) return;
+    const hidden = body.classList.toggle('hidden');
+    header.classList.toggle('collapsed', hidden);
   }
 
   // ── SCHEDULE HEALTH ──────────────────────────────────────────
@@ -795,13 +1030,38 @@
 
   // ── INSTALL SIDEBAR ─────────────────────────────────────────
   async function loadInstall() {
-    const el = document.getElementById('installSidebar');
+    const el  = document.getElementById('installSidebar');
+    const rev = document.getElementById('sidebarRev');
     try {
-      const records = await fetchAll(PROD_BASE, T.workOrders, {
-        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")))`,
-        fields: ['Name','Work Order Status','% Complete','Scheduled Completion Date','Due Date'],
-        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
-      });
+      const now = new Date();
+      const monthStr   = String(now.getMonth() + 1).padStart(2,'0');
+      const monthStart = `${now.getFullYear()}-${monthStr}-01`;
+      const monthEnd   = `${now.getFullYear()}-${monthStr}-31`;
+      const monthName  = now.toLocaleDateString('en-US', { month: 'long' });
+
+      const [records, schedRecs] = await Promise.all([
+        fetchAll(PROD_BASE, T.workOrders, {
+          filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")))`,
+          fields: ['Name','Work Order Status','% Complete','Scheduled Completion Date','Due Date'],
+          sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
+        }),
+        fetchAll(PROD_BASE, T.workOrders, {
+          filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")),{Scheduled Completion Date}>="${monthStart}",{Scheduled Completion Date}<="${monthEnd}")`,
+          fields: ['Pre-Tax Revenue']
+        })
+      ]);
+
+      const schedTotal = schedRecs.reduce((sum, r) => sum + (r.fields['Pre-Tax Revenue'] || 0), 0);
+      const schedPct   = Math.min(Math.round((schedTotal / MONTHLY_GOAL) * 100), 100);
+      rev.innerHTML = `
+        <div class="sidebar-rev-card">
+          <div class="sidebar-rev-label">Projected Install Revenue · ${monthName}</div>
+          <div class="sidebar-rev-value">${fmt$(schedTotal)}</div>
+          <div class="sidebar-rev-sub">${schedRecs.length} WOs due this month</div>
+          <div class="sidebar-rev-bar-wrap">
+            <div class="sidebar-rev-bar" style="width:${schedPct}%"></div>
+          </div>
+        </div>`;
 
       const inProgress = records.filter(r => r.fields['Work Order Status'] === 'In Progress' || (r.fields['% Complete'] || 0) > 0);
       const upcoming   = records.filter(r => r.fields['Work Order Status'] === 'Not Started' && (r.fields['% Complete'] || 0) === 0);
@@ -840,7 +1100,8 @@
         ${inProgress.length === 0 && upcoming.length === 0 ? '<div class="dept-empty">No active installs</div>' : ''}
       `;
     } catch(e) {
-      el.innerHTML = `<div class="error-msg">Install failed: ${e.message}</div>`;
+      el.innerHTML  = `<div class="error-msg">Install failed: ${e.message}</div>`;
+      rev.innerHTML = '';
     }
   }
 
@@ -866,6 +1127,7 @@
     await Promise.all([
       loadRevenue(),
       loadShopFloor(),
+      loadMaterialRisk(),
       loadMaterials(),
       loadScheduleHealth(),
       loadInstall(),
