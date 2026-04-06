@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cabinetry Pipeline</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    [data-theme="dark"]  { --bg:#111827; --text:#e5e7eb; --muted:#6b7280; --dim:#374151; --li:#d1d5db; --divider:rgba(255,255,255,0.07); --detail:rgba(255,255,255,0.04); --toggle:#1f2937; }
+    [data-theme="light"] { --bg:#f1f5f9; --text:#111827; --muted:#6b7280; --dim:#9ca3af;  --li:#374151; --divider:rgba(0,0,0,0.07);       --detail:rgba(0,0,0,0.03);       --toggle:#e2e8f0; }
+
+    body { font-family:'Segoe UI',Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; padding:32px 20px 60px; transition:background 0.25s,color 0.25s; }
+
+    .mode-toggle {
+      position:fixed; top:16px; right:16px; padding:7px 14px; border-radius:20px;
+      border:1px solid var(--divider); background:var(--toggle); color:var(--text);
+      font-size:0.78rem; font-weight:600; cursor:pointer; z-index:100;
+      display:flex; align-items:center; gap:6px; transition:background 0.2s;
+    }
+
+    h1 { text-align:center; font-size:1.5rem; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .subtitle { text-align:center; font-size:0.8rem; color:var(--muted); margin-bottom:28px; }
+    .pipeline { display:flex; flex-direction:column; align-items:center; }
+
+    /* Status bar */
+    .status-bar { display:flex; align-items:center; width:100%; max-width:680px; margin-bottom:6px; }
+    .status-step {
+      flex:1; padding:8px 4px; text-align:center; font-size:0.63rem; font-weight:700; line-height:1.3; color:#fff;
+      clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);
+    }
+    .status-step:first-child { clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%); }
+    .status-step:last-child  { clip-path:polygon(0 0,100% 0,100% 100%,0 100%,10px 50%); }
+    .ss1{background:#0ea5e9;} .ss2{background:#8b5cf6;} .ss3{background:#eab308;color:#111;}
+    .ss4{background:#f97316;} .ss5{background:#22c55e;}
+
+    .status-lost-wrap { display:flex; align-items:center; gap:8px; width:100%; max-width:680px; margin-bottom:6px; justify-content:flex-end; }
+    .status-lost-label { font-size:0.62rem; color:var(--dim); font-style:italic; }
+    .status-lost { padding:5px 14px; border-radius:4px; font-size:0.63rem; font-weight:700; background:#ef444422; color:#ef4444; border:1px dashed #ef444466; }
+    .status-label { font-size:0.65rem; color:var(--dim); text-align:center; margin-bottom:24px; width:100%; max-width:680px; }
+    .click-hint   { font-size:0.68rem; color:var(--dim); text-align:center; margin-bottom:16px; width:100%; max-width:680px; }
+
+    /* Phase headers */
+    .phase-header { width:100%; max-width:680px; padding:6px 18px; font-size:0.68rem; font-weight:800; letter-spacing:2px; text-transform:uppercase; text-align:center; border-radius:6px 6px 0 0; margin-top:24px; color:#fff; }
+    .ph-lead{background:#6b7280;} .ph-sales{background:#6366f1;} .ph-eng{background:#10b981;} .ph-prod{background:#ec4899;}
+
+    /* Stage cards */
+    .stage-wrap { width:100%; max-width:680px; }
+    .stage-card { width:100%; border-left:4px solid var(--accent,#6b7280); cursor:pointer; transition:filter 0.15s; }
+    [data-theme="dark"]  .stage-card { background:color-mix(in srgb,var(--accent,#6b7280) 14%,#1c2535); }
+    [data-theme="light"] .stage-card { background:color-mix(in srgb,var(--accent,#6b7280) 9%,#ffffff); }
+    [data-theme="dark"]  .stage-card:hover { filter:brightness(1.1); }
+    [data-theme="light"] .stage-card:hover { filter:brightness(0.96); }
+
+    .stage-header { display:flex; align-items:center; gap:12px; padding:13px 18px; }
+    .stage-num-badge { font-size:0.62rem; font-weight:800; padding:3px 9px; border-radius:20px; white-space:nowrap; flex-shrink:0; background:var(--accent,#6b7280); color:#fff; }
+    .dark-text .stage-num-badge { color:#111; }
+    .stage-title { font-size:0.98rem; font-weight:700; color:var(--text); flex:1; }
+    .stage-badges { display:flex; gap:5px; flex-wrap:wrap; flex-shrink:0; }
+
+    .badge { font-size:0.62rem; padding:2px 7px; border-radius:20px; font-weight:600; }
+    [data-theme="dark"]  .b-cab  { background:#7c3aed33; color:#c4b5fd; border:1px solid #7c3aed55; }
+    [data-theme="dark"]  .b-note { background:#f59e0b22; color:#fbbf24; border:1px solid #f59e0b44; }
+    [data-theme="light"] .b-cab  { background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; }
+    [data-theme="light"] .b-note { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+
+    .toggle-icon { font-size:0.75rem; color:var(--dim); flex-shrink:0; transition:transform 0.2s; transform:rotate(180deg); }
+    .stage-card.closed .toggle-icon { transform:rotate(0deg); }
+
+    .stage-detail { display:block; padding:0 18px 16px; border-top:1px solid var(--divider); }
+    .stage-card.closed .stage-detail { display:none; }
+
+    .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+    @media(max-width:560px){.detail-grid{grid-template-columns:1fr;}}
+    .detail-box { padding:12px 14px; border-radius:8px; background:var(--detail); }
+    .detail-box h4 { font-size:0.68rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+    .detail-box.what h4  { color:#38bdf8; } .detail-box.move h4  { color:#4ade80; } .detail-box.stuck h4 { color:#f87171; }
+    [data-theme="light"] .detail-box.what h4  { color:#0369a1; }
+    [data-theme="light"] .detail-box.move h4  { color:#15803d; }
+    [data-theme="light"] .detail-box.stuck h4 { color:#b91c1c; }
+    .detail-box ul { list-style:none; display:flex; flex-direction:column; gap:5px; }
+    .detail-box ul li { font-size:0.8rem; color:var(--li); padding-left:16px; position:relative; line-height:1.4; }
+    .detail-box.what  ul li::before { content:'→'; position:absolute; left:0; color:var(--dim); }
+    .detail-box.move  ul li::before { content:'✓'; position:absolute; left:0; color:#22c55e; font-size:0.7rem; top:1px; }
+    .detail-box.stuck ul li::before { content:'✗'; position:absolute; left:0; color:#ef4444; font-size:0.7rem; top:1px; }
+
+    .arrow-down { width:100%; max-width:680px; text-align:center; font-size:1.1rem; color:var(--dim); padding:4px 0; }
+
+    .fork-row { display:flex; gap:10px; width:100%; max-width:680px; }
+    .fork-card { flex:1; padding:13px 16px; border-radius:8px; border-left:4px solid; }
+    [data-theme="dark"]  .c-won  { background:#052e16; border-color:#22c55e; }
+    [data-theme="dark"]  .c-lost { background:#2e0a0a; border-color:#ef4444; }
+    [data-theme="light"] .c-won  { background:#dcfce7; border-color:#16a34a; }
+    [data-theme="light"] .c-lost { background:#fee2e2; border-color:#dc2626; }
+    .fork-title { font-size:0.85rem; font-weight:700; color:var(--text); margin-bottom:4px; }
+    .fork-sub   { font-size:0.75rem; color:var(--muted); }
+
+    hr.div { border:none; border-top:1px dashed var(--divider); width:100%; max-width:680px; margin:4px 0; }
+  </style>
+</head>
+<body>
+
+<button class="mode-toggle" onclick="toggleMode()">
+  <span id="mode-icon">☀️</span> <span id="mode-label">Light Mode</span>
+</button>
+
+<h1>Cabinetry Pipeline</h1>
+<p class="subtitle">From first call to final delivery · Cabinetry Division · Click any stage for details</p>
+
+<div class="pipeline">
+
+  <div class="status-bar">
+    <div class="status-step ss1">Opportunity</div>
+    <div class="status-step ss2">Project<br>(Open Scopes)</div>
+    <div class="status-step ss3">Project<br>(Awaiting WOs)</div>
+    <div class="status-step ss4">Project</div>
+    <div class="status-step ss5">Ready to<br>Complete</div>
+  </div>
+  <div class="status-lost-wrap">
+    <span class="status-lost-label">can exit at any stage →</span>
+    <span class="status-lost">✗ Lost</span>
+  </div>
+  <div class="status-label">↑ Overall Status auto-calculates from scope and work order data</div>
+  <p class="click-hint">▲ Click any stage to collapse</p>
+
+  <!-- ═══ LEAD ═══ -->
+  <div class="phase-header ph-lead">Lead Stage</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#6b7280" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Step 1</span>
+        <span class="stage-title">New</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Someone reaches out — GC, homeowner, designer, or repeat client</li>
+            <li>Lead is entered in the system but no contact has been made yet</li>
+            <li>Could come through website, phone, trade show, or rep relationship</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Sales rep reaches out to make initial contact</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#78716c" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Step 2</span>
+        <span class="stage-title">Contacted</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Rep has made contact with the client or GC</li>
+            <li>Gathering project info: scope, budget, and timeline</li>
+            <li>Initial call or meeting scheduled; scope of work identified</li>
+            <li>Budget range discussed and timeline confirmed</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Enough info gathered to price the job</li>
+            <li>Rep submits budget pricing to the client</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#a16207" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Step 3</span>
+        <span class="stage-title">Cabinetry — Submitted</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Budget pricing has been sent to the client — waiting on their response</li>
+            <li>Ops builds the initial budget estimate</li>
+            <li>Rep delivers pricing to client/GC and manages follow-up questions</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Client confirms they want to move forward</li>
+            <li>Rep determines it is a real job worth pursuing</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Lost / Exits here when</h4><ul>
+            <li>Client goes quiet or budget doesn't fit</li>
+            <li>Project is not viable to pursue — mark lead Lost with reason noted</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#b45309" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Step 4</span>
+        <span class="stage-title">Qualified</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Lead is confirmed as a real opportunity worth pursuing</li>
+            <li>This is the trigger to create Scopes and an Opportunity record in the CRM</li>
+            <li>The job gets a number here — moves into the Sales pipeline</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Scopes and Opportunity are created in the CRM</li>
+            <li>Job number is assigned</li>
+            <li>Moves into the Sales pipeline</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SALES ═══ -->
+  <div class="phase-header ph-sales">Sales / CRM</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#0ea5e9" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Entry</span>
+        <span class="stage-title">Opportunity Created</span>
+        <div class="stage-badges"><span class="badge b-note">Overall Status: Opportunity</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>A formal record exists in the CRM — Opportunity linked to a client, company, and Cabinetry scope</li>
+            <li>Scope is created with an Estimated Value and set to "Open" status</li>
+            <li>Job number is assigned at this step</li>
+            <li>Overall Status = "Opportunity" — no scopes won yet</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Enough information to begin estimating — scope description, drawings, or specs available</li>
+            <li>Sent to ops to queue for estimating</li>
+            <li>Ops Quote Status set to "Queued for Estimating"</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#3b82f6" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 1</span>
+        <span class="stage-title">Bid</span>
+        <div class="stage-badges"><span class="badge b-note">Workflow Type: Opportunity</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Operations reviews the scope and builds a quote — material costs, labor, lead times, margins</li>
+            <li>Ops Quote Status flows: Queued for Estimating → In Estimating → Ready for Rep</li>
+            <li>May pause at "Waiting on Customer Info" (missing specs) or "Waiting on Internal Input"</li>
+            <li>Proposal Due Date is tracked — late quotes cost jobs</li>
+            <li>Award Status = "Quoting"</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Quote is complete and reviewed by ops</li>
+            <li>Ops Quote Status = "Ready for Rep"</li>
+            <li>Sales rep picks it up and prepares to deliver the proposal</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Lost / Exits here when</h4><ul>
+            <li>Client cancels or goes quiet before a proposal is even sent</li>
+            <li>Project is not viable to quote (too small, budget mismatch, out of scope)</li>
+            <li>Set Scope Status → Lost or On Hold</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#6366f1" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Sales</span>
+        <span class="stage-title">Proposal Sent</span>
+        <div class="stage-badges"><span class="badge b-note">Award Status: Quoting</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Sales rep delivers the formal proposal to the GC or client</li>
+            <li>Proposal Date is logged on the Scope record</li>
+            <li>Rep manages follow-up, handles questions, negotiates if needed</li>
+            <li>Probability % on the scope reflects confidence of winning</li>
+            <li>Expected Award Date tracked for pipeline forecasting</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Client/GC verbally or formally accepts the quote</li>
+            <li>Contract signed or purchase order / letter of intent received</li>
+            <li>Scope Status flips to "Won" → triggers Overall Status change</li>
+            <li>Award Status → "Awarded"</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="fork-row">
+    <div class="fork-card c-won">
+      <div class="fork-title">✓ Won — Job Awarded</div>
+      <div class="fork-sub">Scope Status → Won · Award Status → Awarded<br>Overall Status shifts toward "Project"</div>
+    </div>
+    <div class="fork-card c-lost">
+      <div class="fork-title">✗ Lost — Scope Closed</div>
+      <div class="fork-sub">Scope Status → Lost · Win/Lost Reason logged<br>Competitor tracked if known · Overall Status → Lost</div>
+    </div>
+  </div>
+  <div class="arrow-down" style="text-align:left;padding-left:180px;font-size:0.75rem;">▼ &nbsp;(lost exits here)</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#8b5cf6" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 3</span>
+        <span class="stage-title">Job Awarded</span>
+        <div class="stage-badges"><span class="badge b-note">Workflow Type: Project</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Official handoff from sales to operations</li>
+            <li>The job now exists as a Project — a PM is assigned, a Job record is linked</li>
+            <li>Scope Status → Won · Award Status → Awarded</li>
+            <li>Overall Status = "Project (Open Scopes)"</li>
+            <li>Production planning begins — delivery dates, lead times, engineering queue established</li>
+            <li>Work Orders do not exist yet; this is kickoff</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>PM is assigned and confirmed</li>
+            <li>Scope locked and client contact established</li>
+            <li>Delivery dates and lead times established</li>
+            <li>Engineering queue set up — moves to Design (Stage 2)</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ENGINEERING ═══ -->
+  <div class="phase-header ph-eng">Engineering / Pre-Production</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#14b8a6" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 2</span>
+        <span class="stage-title">Design</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Project</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Cabinet Vision drawings built out — layouts, elevations, door styles, hardware, finishes</li>
+            <li>Pre-production drawings handled by the PM</li>
+            <li>Client and/or designer must approve the design before engineering can proceed</li>
+            <li>Door style, wood species, finish, and hardware decisions must all be locked in here</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Cabinet Vision drawings complete and approved by client/designer</li>
+            <li>All client decisions finalized — door style, hardware, finish, wood species</li>
+            <li>No outstanding questions that would require a redesign</li>
+            <li>Moves to Engineering Not Started (Stage 4) once design is locked</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Gets stuck here when</h4><ul>
+            <li>Client hasn't made decisions (door style, hardware, finish) — major bottleneck source</li>
+            <li>Designer changes scope mid-design, requiring a restart</li>
+            <li>Client decision deadline not set or enforced → delays cascade into engineering and production</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#06b6d4" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 4</span>
+        <span class="stage-title">Engineering Not Started</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Project</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Engineering is in the queue but no one has started yet</li>
+            <li>All inputs exist — design finalized, scope clear — but engineer hasn't been assigned</li>
+            <li>Sitting here too long is a bottleneck indicator — days at current stage is tracked</li>
+            <li>DraftsPerson and Engineer fields on the Work Order get assigned here</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>An engineer (Gabe, Mike, Brian) is assigned and begins work</li>
+            <li>Cabinet Vision drawings are complete and locked</li>
+            <li>Shop drawings / panel drawings ready to begin</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#10b981" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 5</span>
+        <span class="stage-title">Engineering In Progress</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Project</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Active engineering — panel drawings, block sheets, cut sheets, CNC programs being built</li>
+            <li>Cabinet Vision output → CNC files, hardware pull lists, assembly drawings</li>
+            <li>Knife specs flagged if custom profiles are needed — Russell's grinding room scheduled</li>
+            <li>WO sent to CAD field tracks whether drawings are attached to the work order file</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>All drawings complete and attached to the WO file</li>
+            <li>CNC programs ready (if CNC involved)</li>
+            <li>Custom knife profiles ordered / confirmed with Russell if needed</li>
+            <li>No outstanding client decisions that affect the build</li>
+            <li>"Production Ready": decisions finalized, CAD complete, WOs created, materials onsite</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Gets stuck here when</h4><ul>
+            <li>Engineering is behind schedule (e.g., Martha Retreat situation)</li>
+            <li>Client changes scope after engineering has started — requires partial or full redo</li>
+            <li>Missing information forces the engineer to pause and wait</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card dark-text" style="--accent:#84cc16" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 6</span>
+        <span class="stage-title">Brokerage Order In Progress</span>
+        <div class="stage-badges"><span class="badge b-note">Hardware &amp; Purchased Items</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Brokerage cabinet orders are being written, sent to vendor, and confirmations checked</li>
+            <li>Order requests for specialty items (glass, hardware, brackets, sink mounts) added to the AT Order page</li>
+            <li>PBO (Provided By Owner) requests are submitted through the AT Order Request page</li>
+            <li>Custom to Brokerage Work Order requests are submitted</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>All hardware and purchased items have been ordered (POs sent)</li>
+            <li>Vendor confirmations received with expected delivery dates</li>
+            <li>No back-ordered items that would block production or delivery</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card dark-text" style="--accent:#eab308" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 7</span>
+        <span class="stage-title">Finalize Material / Brokerage Orders</span>
+        <div class="stage-badges"><span class="badge b-note">Overall: Project (Awaiting WOs)</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Final confirmation that all materials and hardware orders are accounted for</li>
+            <li>Lumber, sheet goods, hardware all verified against WO requirements</li>
+            <li>Back Order Items? field flags anything that could hold production</li>
+            <li>Work Orders formally created here — triggers Overall Status shift from "Awaiting WOs" to "Project"</li>
+            <li>Placeholder WOs get promoted to Active here</li>
+            <li>PBO (Provided By Owner) items confirmed and tracked through the AT Order Request page</li>
+            <li>FEO review completed and signed off before Work Orders are released</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>All materials confirmed — in-house or confirmed ETA from vendor</li>
+            <li>Work Orders fully created and linked to the scope</li>
+            <li>WO Type = Active (not Placeholder or Pending)</li>
+            <li>Ready to hand off to production for final review</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PRODUCTION ═══ -->
+  <div class="phase-header ph-prod">Production</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#f97316" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 8</span>
+        <span class="stage-title">Final WO Review</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Production</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Work Order gets a final quality check before it hits the shop floor</li>
+            <li>MOC review triggered by "Ready for MOC Review" flag</li>
+            <li>MOC verifies: drawings attached, CNC files flagged, hardware listed, knife profiles confirmed, paint/stain grade noted</li>
+            <li>Lumber source confirmed (lock shed, warehouse, etc.)</li>
+            <li>Sub Work Orders confirmed</li>
+            <li>HBIC review completed as final sign-off</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>MOC and HBIC reviews complete and signed off</li>
+            <li>WO is Released (Released field checked) — formal release to the shop</li>
+            <li>All drawings and files confirmed attached to the WO</li>
+            <li>Materials confirmed on-hand or arriving imminently</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#ef4444" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 9</span>
+        <span class="stage-title">Ready for Production</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Production</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>WO is on the production schedule — shop has everything it needs but hasn't started yet</li>
+            <li>Queued in the build schedule based on due date and capacity</li>
+            <li>Materials are physically staged at the shop</li>
+            <li>WO Need By Date is firm and the schedule is built around it</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Shop floor picks up the WO and begins actual build work</li>
+            <li>First daily progress entry logged (Daily Earned Revenue tracking starts)</li>
+            <li>CNC starts running, frames start getting cut, or assembly begins</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Gets stuck here when</h4><ul>
+            <li>Materials didn't show up on time (vendor delay, back order)</li>
+            <li>Higher-priority WOs bump it in the queue (capacity conflict)</li>
+            <li>Knife not ground yet or CNC program not fully ready</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#ec4899" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 10</span>
+        <span class="stage-title">In Production</span>
+        <div class="stage-badges">
+          <span class="badge b-cab">Cabinetry</span>
+          <span class="badge b-note">Workflow Type: Production</span>
+        </div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Active build in the shop — CNC running, frames built, doors made, boxes assembled, finishing applied</li>
+            <li>Daily Earned Revenue tracked — progress updated each day</li>
+            <li>WO Status and Progress % visible to management in real time</li>
+            <li>Sub Work Orders may exist for specific components (CNC, glue-up, doors)</li>
+            <li>Days Behind and Off Track? fields flag schedule risk</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Build 100% complete — all line items finished</li>
+            <li>Quality check passed by shop supervisor</li>
+            <li>Product packed, stacked, and ready for pickup or staging</li>
+            <li>Progress = 100% on all work order line items</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Gets stuck here when</h4><ul>
+            <li>Incorrect drawings or programs requiring rework</li>
+            <li>Color samples not approved before production began</li>
+            <li>Material not ready — missing components holding up the build</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#a855f7" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 11</span>
+        <span class="stage-title">Staged</span>
+        <div class="stage-badges"><span class="badge b-note">Workflow Type: Production</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Product fully built and physically staged in the shop or warehouse — waiting on delivery</li>
+            <li>May be waiting on: job site readiness, install schedule slot, or phase sequencing</li>
+            <li>Show on Delivery Dashboard field is checked so delivery team can see it's ready</li>
+            <li>For large projects, many WOs can be staged simultaneously waiting for phase sequencing</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Qualifies to move</h4><ul>
+            <li>Delivery date confirmed with the GC or client</li>
+            <li>Delivery Confirmed? field is checked</li>
+            <li>Truck is scheduled and route confirmed</li>
+            <li>Site is ready to receive product</li>
+          </ul></div>
+        </div>
+        <div class="detail-grid" style="margin-top:8px;">
+          <div class="detail-box stuck" style="grid-column:1/-1;"><h4>Gets stuck here when</h4><ul>
+            <li>Site is not ready — GC pushed the schedule, other trades not done</li>
+            <li>Too much staged product ties up shop floor space</li>
+            <li>Phase sequencing holds product (Phase 2 can't go until Phase 1 install is confirmed)</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="arrow-down">▼</div>
+
+  <div class="stage-wrap">
+    <div class="stage-card" style="--accent:#22c55e" onclick="toggle(this)">
+      <div class="stage-header">
+        <span class="stage-num-badge">Stage 12</span>
+        <span class="stage-title">✓ Delivered</span>
+        <div class="stage-badges"><span class="badge b-note">Overall: Ready to Complete</span></div>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="stage-detail">
+        <div class="detail-grid">
+          <div class="detail-box what"><h4>What it is</h4><ul>
+            <li>Product physically on the job site — truck delivered, product offloaded</li>
+            <li>Delivery Ticket generated and signed by site contact</li>
+            <li>Delivery photos archived in Airtable</li>
+            <li>Billing triggered — Billing record created, invoice sent</li>
+            <li>When ALL Work Orders reach Delivered → Overall Status becomes "Ready to Complete"</li>
+          </ul></div>
+          <div class="detail-box move"><h4>Project is complete when</h4><ul>
+            <li>All WOs delivered and billing submitted</li>
+            <li>No outstanding Field Work Orders remaining</li>
+            <li>Closeout punch list items resolved</li>
+            <li>Final payment received → project fully closed</li>
+          </ul></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggle(card) { card.classList.toggle('closed'); }
+  function toggleMode() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('mode-icon').textContent  = isDark ? '🌙' : '☀️';
+    document.getElementById('mode-label').textContent = isDark ? 'Dark Mode' : 'Light Mode';
+  }
+</script>
+</body>
+</html>
