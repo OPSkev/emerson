@@ -350,12 +350,14 @@
             <li>Scope Status → Won · Award Status → Awarded</li>
             <li>Overall Status = "Project (Open Scopes)"</li>
             <li>Production planning begins — delivery dates, lead times, engineering queue established</li>
-            <li>Work Orders do not exist yet; this is kickoff</li>
+            <li><strong>Placeholder Work Orders are created manually at this stage</strong> — triggered by the scope flipping to Won</li>
+            <li>Placeholder WOs hold the production slot and show capacity impact before engineering begins — no drawings or materials needed yet</li>
           </ul></div>
           <div class="detail-box move"><h4>Qualifies to move</h4><ul>
             <li>PM is assigned and confirmed</li>
             <li>Scope locked and client contact established</li>
             <li>Delivery dates and lead times established</li>
+            <li>Placeholder WOs created to hold the production slot</li>
             <li>Engineering queue set up — moves to Design (Stage 2)</li>
           </ul></div>
         </div>
@@ -514,8 +516,8 @@
             <li>Final confirmation that all materials and hardware orders are accounted for</li>
             <li>Lumber, sheet goods, hardware all verified against WO requirements</li>
             <li>Back Order Items? field flags anything that could hold production</li>
-            <li>Work Orders formally created here — triggers Overall Status shift from "Awaiting WOs" to "Project"</li>
-            <li>Placeholder WOs get promoted to Active here</li>
+            <li>Production Work Orders are formally created here (post-engineering) — these are separate from Placeholder WOs created at Stage 3</li>
+            <li>Placeholder WOs are promoted to Active once materials are confirmed and engineering is complete</li>
             <li>PBO (Provided By Owner) items confirmed and tracked through the AT Order Request page</li>
             <li>FEO review completed and signed off before Work Orders are released</li>
           </ul></div>
