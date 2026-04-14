@@ -210,6 +210,10 @@
       const url = new URL(base);
       Object.entries(params).forEach(([k, v]) => {
         if (k === 'fields' && Array.isArray(v)) v.forEach(f => url.searchParams.append('fields[]', f));
+        else if (k === 'sort' && Array.isArray(v)) v.forEach((s, i) => {
+          url.searchParams.append(`sort[${i}][field]`, s.field);
+          url.searchParams.append(`sort[${i}][direction]`, s.direction || 'asc');
+        });
         else url.searchParams.set(k, v);
       });
       if (offset) url.searchParams.set('offset', offset);
@@ -361,7 +365,7 @@
           'User (from Sales Rep)','Days in Pipeline',
           'Expected First Delivery Date','Job Address (from Job) (from Opportunity)',
         ],
-        sort: JSON.stringify([{ field: 'Probability %', direction: 'desc' }]),
+        sort: [{ field: 'Probability %', direction: 'desc' }],
       });
       updateSummary();
       renderTable();
