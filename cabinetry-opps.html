@@ -230,6 +230,7 @@
       <tr>
         <th>Job</th>
         <th>Sales Rep</th>
+        <th>PM</th>
         <th class="right">Est. Value</th>
         <th>Win Probability</th>
         <th>Quote Status</th>
@@ -238,7 +239,7 @@
       </tr>
     </thead>
     <tbody id="tableBody">
-      <tr><td colspan="7" class="loading">Loading pipeline data…</td></tr>
+      <tr><td colspan="8" class="loading">Loading pipeline data…</td></tr>
     </tbody>
   </table>
 </div>
@@ -384,7 +385,7 @@
 
     const tbody = document.getElementById('tableBody');
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">No open cabinetry scopes found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading">No open cabinetry scopes found.</td></tr>';
       return;
     }
 
@@ -395,6 +396,8 @@
       const address = (f['Job Address (from Job) (from Opportunity)'] || [])[0] || '';
       const repUser = (f['User (from Sales Rep)'] || [])[0];
       const rep     = repUser ? repUser.name.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
+      const pmRaw   = f['Project Manager'] || '';
+      const pm      = pmRaw ? pmRaw.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
       const prob    = f['Probability %'];
       const probPct = prob !== undefined && prob !== null ? Math.round(prob * 100) : null;
       const pc      = probClass(prob);
@@ -412,6 +415,7 @@
           ${address ? `<div class="job-address">${address.split('\n')[0]}</div>` : ''}
         </td>
         <td><span class="rep-name">${rep}</span></td>
+        <td><span class="rep-name">${pm}</span></td>
         <td class="right">${estVal ? `<span class="est-value">${fmt$(estVal)}</span>` : `<span class="est-none">TBD</span>`}</td>
         <td>
           <div class="prob-wrap ${pc}">
@@ -457,7 +461,7 @@
         fields: [
           'Scope Name','Job Name Only','Opportunity Name','Phase',
           'Probability %','Estimated Value','Ops Quote Status',
-          'User (from Sales Rep)','Days in Pipeline',
+          'User (from Sales Rep)','Project Manager','Days in Pipeline',
           'Expected First Delivery Date','Job Address (from Job) (from Opportunity)',
         ],
         sort: [{ field: 'Probability %', direction: 'desc' }],
@@ -466,7 +470,7 @@
       renderTable();
     } catch (e) {
       document.getElementById('tableBody').innerHTML =
-        `<tr><td colspan="7" class="error-msg">Failed to load: ${e.message}</td></tr>`;
+        `<tr><td colspan="8" class="error-msg">Failed to load: ${e.message}</td></tr>`;
     }
   }
 
