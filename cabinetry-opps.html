@@ -396,8 +396,9 @@
       const address = (f['Job Address (from Job) (from Opportunity)'] || [])[0] || '';
       const repUser = (f['User (from Sales Rep)'] || [])[0];
       const rep     = repUser ? repUser.name.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
-      const pmRaw   = f['Project Manager'] || '';
-      const pm      = pmRaw ? pmRaw.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
+      const pmRaw   = f['Project Manager'];
+      const pmStr   = Array.isArray(pmRaw) ? (pmRaw[0] || '') : (typeof pmRaw === 'string' ? pmRaw : (pmRaw?.name || ''));
+      const pm      = pmStr ? pmStr.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
       const prob    = f['Probability %'];
       const probPct = prob !== undefined && prob !== null ? Math.round(prob * 100) : null;
       const pc      = probClass(prob);
