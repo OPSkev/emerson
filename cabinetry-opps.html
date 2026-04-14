@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cabinetry Pipeline Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f8fafc;
+      color: #111827;
+      padding: 32px 24px 60px;
+    }
+
+    /* ── HEADER ── */
+    .report-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #111827;
+    }
+    .report-title { font-size: 1.4rem; font-weight: 800; color: #111827; }
+    .report-sub { font-size: 0.78rem; color: #6b7280; margin-top: 4px; }
+    .report-meta { text-align: right; font-size: 0.75rem; color: #6b7280; }
+    .report-meta strong { color: #111827; }
+
+    /* ── SUMMARY STRIP ── */
+    .summary-strip {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .sum-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px 20px;
+      flex: 1;
+      text-align: center;
+    }
+    .sum-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 4px; }
+    .sum-value { font-size: 1.3rem; font-weight: 800; color: #111827; }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+    }
+    .print-btn {
+      background: #111827; color: #fff;
+      border: none; padding: 8px 18px;
+      border-radius: 6px; font-size: 0.8rem;
+      font-weight: 600; cursor: pointer;
+    }
+    .print-btn:hover { background: #374151; }
+    .sort-label { font-size: 0.75rem; color: #6b7280; }
+    select {
+      font-size: 0.78rem; padding: 6px 10px;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      background: #fff; color: #111827; cursor: pointer;
+    }
+
+    /* ── TABLE ── */
+    .table-wrap { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { background: #111827; }
+    thead th {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; color: #d1d5db;
+      padding: 10px 14px; text-align: left; white-space: nowrap;
+    }
+    thead th.right { text-align: right; }
+
+    tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+
+    td { padding: 11px 14px; font-size: 0.82rem; color: #374151; vertical-align: middle; }
+    td.right { text-align: right; }
+
+    .job-name { font-weight: 700; color: #111827; }
+    .job-phase { font-size: 0.68rem; color: #6b7280; margin-top: 2px; }
+    .job-address { font-size: 0.68rem; color: #9ca3af; margin-top: 2px; }
+
+    /* Probability bar */
+    .prob-wrap { display: flex; align-items: center; gap: 8px; }
+    .prob-bar-bg { flex: 1; background: #e5e7eb; border-radius: 4px; height: 5px; min-width: 50px; }
+    .prob-bar { height: 100%; border-radius: 4px; }
+    .prob-pct { font-size: 0.75rem; font-weight: 700; width: 32px; text-align: right; flex-shrink: 0; }
+    .p-high  .prob-bar { background: #22c55e; }
+    .p-high  .prob-pct { color: #16a34a; }
+    .p-med   .prob-bar { background: #eab308; }
+    .p-med   .prob-pct { color: #a16207; }
+    .p-low   .prob-bar { background: #f97316; }
+    .p-low   .prob-pct { color: #c2410c; }
+    .p-none  .prob-bar { background: #d1d5db; }
+    .p-none  .prob-pct { color: #9ca3af; }
+
+    .est-value { font-weight: 600; }
+    .est-none  { color: #d1d5db; font-style: italic; font-size: 0.72rem; }
+
+    .stage-badge {
+      display: inline-block;
+      font-size: 0.65rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      background: #f1f5f9; color: #374151;
+      border: 1px solid #e5e7eb;
+      white-space: nowrap;
+    }
+    .stage-badge.estimating { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .stage-badge.ready      { background: #fefce8; color: #a16207; border-color: #fde68a; }
+    .stage-badge.review     { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .stage-badge.none       { background: #f9fafb; color: #9ca3af; border-color: #e5e7eb; font-style: italic; }
+
+    .rep-name { font-size: 0.75rem; color: #6b7280; }
+    .days-badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 600;
+      padding: 2px 7px; border-radius: 20px; white-space: nowrap;
+    }
+    .days-new  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .days-mid  { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .days-old  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .delivery { font-size: 0.75rem; color: #6b7280; }
+    .delivery.soon { color: #dc2626; font-weight: 600; }
+
+    /* ── LOADING / ERROR ── */
+    .loading { text-align: center; padding: 48px; color: #9ca3af; font-size: 0.9rem; }
+    .error-msg { text-align: center; padding: 24px; color: #dc2626; font-size: 0.85rem; }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: #fff; padding: 16px; }
+      .controls { display: none; }
+      .table-wrap { border: 1px solid #ccc; }
+      tbody tr:hover { background: transparent; }
+      .report-header { border-bottom: 2px solid #000; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="report-header">
+  <div>
+    <div class="report-title">Cabinetry Pipeline — Open Opportunities</div>
+    <div class="report-sub">E.F. San Juan · All open cabinetry scopes · Sorted by win probability</div>
+  </div>
+  <div class="report-meta">
+    <div id="reportDate"></div>
+    <div id="recordCount" style="margin-top:4px;"></div>
+  </div>
+</div>
+
+<div class="summary-strip" id="summaryStrip">
+  <div class="sum-card"><div class="sum-label">Open Scopes</div><div class="sum-value" id="sumCount">—</div></div>
+  <div class="sum-card"><div class="sum-label">Est. Pipeline Value</div><div class="sum-value" id="sumValue">—</div></div>
+  <div class="sum-card"><div class="sum-label">Weighted Value</div><div class="sum-value" id="sumWeighted">—</div></div>
+  <div class="sum-card"><div class="sum-label">Avg. Probability</div><div class="sum-value" id="sumAvgProb">—</div></div>
+</div>
+
+<div class="controls">
+  <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+  <span class="sort-label">Sort by:</span>
+  <select id="sortSelect" onchange="renderTable()">
+    <option value="prob">Win Probability</option>
+    <option value="value">Est. Value</option>
+    <option value="days">Days in Pipeline</option>
+    <option value="delivery">Expected Delivery</option>
+    <option value="job">Job Name</option>
+  </select>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Job</th>
+        <th>Sales Rep</th>
+        <th class="right">Est. Value</th>
+        <th>Win Probability</th>
+        <th>Quote Status</th>
+        <th>Days in Pipeline</th>
+        <th>Expected Delivery</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody">
+      <tr><td colspan="7" class="loading">Loading pipeline data…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  const TOKEN   = 'pat0KeG33iHuNNwPm.a4413a9d2618ad3a6656ccbfb52e2d7f28e76b464451e792e5620ab879d8e7c3';
+  const CRM_BASE = 'app29rBmk81P2idlq';
+  const SCOPES_TABLE = 'tbltciiCJWpn9YXtl';
+
+  let allRecords = [];
+
+  // ── Fetch ──────────────────────────────────────────────────
+  async function fetchAll(baseId, tableId, params) {
+    let records = [], offset = null;
+    const base = `https://api.airtable.com/v0/${baseId}/${tableId}`;
+    do {
+      const url = new URL(base);
+      Object.entries(params).forEach(([k, v]) => {
+        if (k === 'fields' && Array.isArray(v)) v.forEach(f => url.searchParams.append('fields[]', f));
+        else url.searchParams.set(k, v);
+      });
+      if (offset) url.searchParams.set('offset', offset);
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${TOKEN}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || res.status);
+      records = records.concat(data.records || []);
+      offset = data.offset || null;
+    } while (offset);
+    return records;
+  }
+
+  // ── Formatters ─────────────────────────────────────────────
+  function fmt$(n) { return n ? '$' + Math.round(n).toLocaleString() : null; }
+  function fmtDate(d) {
+    if (!d) return null;
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+  function daysFromNow(d) {
+    if (!d) return null;
+    return Math.round((new Date(d + 'T00:00:00') - new Date()) / 86400000);
+  }
+  function probClass(p) {
+    if (p === null || p === undefined) return 'p-none';
+    if (p >= 0.75) return 'p-high';
+    if (p >= 0.4)  return 'p-med';
+    return 'p-low';
+  }
+  function stageBadge(s) {
+    if (!s) return `<span class="stage-badge none">—</span>`;
+    if (s.toLowerCase().includes('estimating')) return `<span class="stage-badge estimating">${s}</span>`;
+    if (s.toLowerCase().includes('ready'))      return `<span class="stage-badge ready">${s}</span>`;
+    if (s.toLowerCase().includes('review'))     return `<span class="stage-badge review">${s}</span>`;
+    return `<span class="stage-badge">${s}</span>`;
+  }
+  function daysBadge(d) {
+    if (d === null || isNaN(d)) return '<span class="days-badge days-new">New</span>';
+    if (d <= 14)  return `<span class="days-badge days-new">${d}d</span>`;
+    if (d <= 45)  return `<span class="days-badge days-mid">${d}d</span>`;
+    return `<span class="days-badge days-old">${d}d</span>`;
+  }
+
+  // ── Render ─────────────────────────────────────────────────
+  function renderTable() {
+    const sort = document.getElementById('sortSelect').value;
+    const rows = [...allRecords];
+
+    rows.sort((a, b) => {
+      const fa = a.fields, fb = b.fields;
+      if (sort === 'prob') {
+        const pa = fa['Probability %'] ?? -1, pb = fb['Probability %'] ?? -1;
+        return pb - pa;
+      }
+      if (sort === 'value') {
+        return (fb['Estimated Value'] || 0) - (fa['Estimated Value'] || 0);
+      }
+      if (sort === 'days') {
+        return (fb['Days in Pipeline'] || 0) - (fa['Days in Pipeline'] || 0);
+      }
+      if (sort === 'delivery') {
+        const da = fa['Expected First Delivery Date'] || 'zzzz';
+        const db = fb['Expected First Delivery Date'] || 'zzzz';
+        return da.localeCompare(db);
+      }
+      if (sort === 'job') {
+        const ja = (fa['Job Name Only'] || [])[0] || fa['Scope Name'] || '';
+        const jb = (fb['Job Name Only'] || [])[0] || fb['Scope Name'] || '';
+        return ja.localeCompare(jb);
+      }
+      return 0;
+    });
+
+    const tbody = document.getElementById('tableBody');
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">No open cabinetry scopes found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => {
+      const f = r.fields;
+      const jobName = (f['Job Name Only'] || [])[0] || (f['Opportunity Name'] || [])[0] || '–';
+      const phase   = f['Phase'] || '';
+      const address = (f['Job Address (from Job) (from Opportunity)'] || [])[0] || '';
+      const repUser = (f['User (from Sales Rep)'] || [])[0];
+      const rep     = repUser ? repUser.name.split(' ').map((n,i) => i === 0 ? n : n[0]+'.').join(' ') : '–';
+      const prob    = f['Probability %'];
+      const probPct = prob !== undefined && prob !== null ? Math.round(prob * 100) : null;
+      const pc      = probClass(prob);
+      const estVal  = f['Estimated Value'];
+      const stage   = f['Ops Quote Status'] || '';
+      const days    = f['Days in Pipeline'];
+      const delivery = f['Expected First Delivery Date'];
+      const daysUntil = daysFromNow(delivery);
+      const delivClass = daysUntil !== null && daysUntil <= 90 ? 'soon' : '';
+
+      return `<tr>
+        <td>
+          <div class="job-name">${jobName}</div>
+          ${phase ? `<div class="job-phase">${phase}</div>` : ''}
+          ${address ? `<div class="job-address">${address.split('\n')[0]}</div>` : ''}
+        </td>
+        <td><span class="rep-name">${rep}</span></td>
+        <td class="right">${estVal ? `<span class="est-value">${fmt$(estVal)}</span>` : `<span class="est-none">TBD</span>`}</td>
+        <td>
+          <div class="prob-wrap ${pc}">
+            <div class="prob-bar-bg"><div class="prob-bar" style="width:${probPct ?? 0}%"></div></div>
+            <span class="prob-pct">${probPct !== null ? probPct + '%' : '—'}</span>
+          </div>
+        </td>
+        <td>${stageBadge(stage)}</td>
+        <td>${daysBadge(typeof days === 'number' && !isNaN(days) ? days : null)}</td>
+        <td><span class="delivery ${delivClass}">${fmtDate(delivery) || '—'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Summary ────────────────────────────────────────────────
+  function updateSummary() {
+    const total   = allRecords.length;
+    const withVal = allRecords.filter(r => r.fields['Estimated Value']);
+    const pipeline = withVal.reduce((s, r) => s + (r.fields['Estimated Value'] || 0), 0);
+    const weighted = allRecords.reduce((s, r) => {
+      const v = r.fields['Estimated Value'] || 0;
+      const p = r.fields['Probability %'] || 0;
+      return s + v * p;
+    }, 0);
+    const probs = allRecords.filter(r => r.fields['Probability %'] != null).map(r => r.fields['Probability %']);
+    const avgProb = probs.length ? Math.round((probs.reduce((a,b) => a+b, 0) / probs.length) * 100) : null;
+
+    document.getElementById('sumCount').textContent    = total;
+    document.getElementById('sumValue').textContent    = pipeline ? fmt$(pipeline) : '—';
+    document.getElementById('sumWeighted').textContent = weighted ? fmt$(weighted) : '—';
+    document.getElementById('sumAvgProb').textContent  = avgProb !== null ? avgProb + '%' : '—';
+    document.getElementById('recordCount').innerHTML   = `<strong>${total}</strong> open scopes`;
+  }
+
+  // ── Load ───────────────────────────────────────────────────
+  async function load() {
+    document.getElementById('reportDate').textContent =
+      new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    try {
+      allRecords = await fetchAll(CRM_BASE, SCOPES_TABLE, {
+        filterByFormula: 'AND({Scope Category}="Cabinetry",{Status}="Open")',
+        fields: [
+          'Scope Name','Job Name Only','Opportunity Name','Phase',
+          'Probability %','Estimated Value','Ops Quote Status',
+          'User (from Sales Rep)','Days in Pipeline',
+          'Expected First Delivery Date','Job Address (from Job) (from Opportunity)',
+        ],
+        sort: JSON.stringify([{ field: 'Probability %', direction: 'desc' }]),
+      });
+      updateSummary();
+      renderTable();
+    } catch (e) {
+      document.getElementById('tableBody').innerHTML =
+        `<tr><td colspan="7" class="error-msg">Failed to load: ${e.message}</td></tr>`;
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>
