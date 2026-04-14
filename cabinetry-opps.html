@@ -14,6 +14,38 @@
       padding: 32px 24px 60px;
     }
 
+    /* ── LOGIN ── */
+    #loginScreen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; background: #f8fafc;
+      position: fixed; inset: 0; z-index: 999;
+    }
+    .login-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+      padding: 36px 40px; width: 100%; max-width: 360px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    }
+    .login-logo { font-size: 1.1rem; font-weight: 800; letter-spacing: 1px; color: #111827; margin-bottom: 4px; }
+    .login-sub  { font-size: 0.75rem; color: #6b7280; margin-bottom: 28px; }
+    .login-label { font-size: 0.72rem; font-weight: 600; color: #374151; display: block; margin-bottom: 5px; }
+    .login-input {
+      width: 100%; padding: 9px 12px; font-size: 0.85rem;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      color: #111827; background: #fff; margin-bottom: 14px;
+      outline: none; transition: border 0.15s;
+    }
+    .login-input:focus { border-color: #111827; }
+    .login-btn {
+      width: 100%; padding: 10px; background: #111827; color: #fff;
+      border: none; border-radius: 6px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .login-btn:hover { background: #374151; }
+    .login-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+    .login-error { font-size: 0.75rem; color: #dc2626; margin-top: 10px; text-align: center; min-height: 18px; }
+
+    #reportContent { display: none; }
+
     /* ── HEADER ── */
     .report-header {
       display: flex;
@@ -146,6 +178,22 @@
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">E.F. San Juan</div>
+    <div class="login-sub">Cabinetry Pipeline Report · Sign in to continue</div>
+    <label class="login-label">Email</label>
+    <input class="login-input" id="loginEmail" type="email" placeholder="you@efsanjuan.com" autocomplete="email">
+    <label class="login-label">Password</label>
+    <input class="login-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- REPORT -->
+<div id="reportContent">
 <div class="report-header">
   <div>
     <div class="report-title">Cabinetry Pipeline — Open Opportunities</div>
@@ -194,8 +242,55 @@
     </tbody>
   </table>
 </div>
+</div><!-- end reportContent -->
 
 <script>
+  const CLOSEOUT_URL = 'https://closeout-app-production.up.railway.app';
+
+  // ── Auth ───────────────────────────────────────────────────
+  async function doLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn      = document.getElementById('loginBtn');
+    const errEl    = document.getElementById('loginError');
+
+    if (!email || !password) { errEl.textContent = 'Email and password required.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    errEl.textContent = '';
+
+    try {
+      const res = await fetch(`${CLOSEOUT_URL}/api/collections/users/auth-with-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identity: email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.token) throw new Error(data.message || 'Invalid credentials');
+
+      sessionStorage.setItem('co_token', data.token);
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('reportContent').style.display = 'block';
+      load();
+    } catch (e) {
+      errEl.textContent = e.message || 'Sign in failed.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+
+  // Allow Enter key to submit
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('loginScreen').style.display !== 'none') doLogin();
+  });
+
+  // Check for existing session
+  if (sessionStorage.getItem('co_token')) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('reportContent').style.display = 'block';
+  }
+
   const TOKEN   = 'pat0KeG33iHuNNwPm.a4413a9d2618ad3a6656ccbfb52e2d7f28e76b464451e792e5620ab879d8e7c3';
   const CRM_BASE = 'app29rBmk81P2idlq';
   const SCOPES_TABLE = 'tbltciiCJWpn9YXtl';
