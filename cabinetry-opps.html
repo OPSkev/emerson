@@ -166,6 +166,28 @@
     .loading { text-align: center; padding: 48px; color: #9ca3af; font-size: 0.9rem; }
     .error-msg { text-align: center; padding: 24px; color: #dc2626; font-size: 0.85rem; }
 
+    /* ── FWO SECTION ── */
+    .fwo-section { margin-top: 40px; }
+    .fwo-section-title {
+      font-size: 1rem; font-weight: 800; color: #111827;
+      margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 2px solid #111827;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .fwo-count-badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+      background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+      border-radius: 20px;
+    }
+    .fwo-status-badge {
+      display: inline-block; font-size: 0.62rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+    }
+    .fwo-status-requested { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .fwo-status-in_shop   { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .fwo-overdue { color: #b91c1c; font-weight: 700; }
+    .fwo-empty { text-align: center; padding: 32px; color: #9ca3af; font-size: 0.85rem; }
+
     /* ── PRINT ── */
     @media print {
       body { background: #fff; padding: 16px; }
@@ -242,6 +264,30 @@
       <tr><td colspan="8" class="loading">Loading pipeline data…</td></tr>
     </tbody>
   </table>
+</div>
+<!-- Open FWOs Section -->
+<div class="fwo-section">
+  <div class="fwo-section-title">
+    Open Field Work Orders
+    <span class="fwo-count-badge" id="fwoCount">—</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>WO #</th>
+          <th>Project</th>
+          <th>Description</th>
+          <th>Room</th>
+          <th>Status</th>
+          <th>Need By</th>
+        </tr>
+      </thead>
+      <tbody id="fwoTableBody">
+        <tr><td colspan="6" class="loading">Loading FWOs…</td></tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 </div><!-- end reportContent -->
 
@@ -450,6 +496,70 @@
     document.getElementById('recordCount').innerHTML   = `<strong>${total}</strong> open scopes`;
   }
 
+  // ── Load FWOs from Closeout ────────────────────────────────
+  async function loadFWOs() {
+    const token = sessionStorage.getItem('co_token');
+    const tbody = document.getElementById('fwoTableBody');
+    if (!token) { tbody.innerHTML = '<tr><td colspan="6" class="fwo-empty">Not signed in to Closeout.</td></tr>'; return; }
+
+    try {
+      // fetch all open FWOs + all projects for name lookup
+      const [woRes, projRes] = await Promise.all([
+        fetch(`${CLOSEOUT_URL}/api/collections/field_work_orders/records?filter=status+%21%3D+%22complete%22&sort=-id&perPage=200`, {
+          headers: { Authorization: token },
+        }),
+        fetch(`${CLOSEOUT_URL}/api/collections/projects/records?sort=name&perPage=200`, {
+          headers: { Authorization: token },
+        }),
+      ]);
+      const woData   = await woRes.json();
+      const projData = await projRes.json();
+
+      const wos   = woData.items  || [];
+      const projs = projData.items || [];
+      const projMap = {};
+      projs.forEach(p => { projMap[p.id] = p.name; });
+
+      const today = new Date().toISOString().substring(0, 10);
+      const open  = wos.filter(w => w.status !== 'complete');
+
+      // sort: overdue first, then by need_by_date, then by id desc
+      open.sort((a, b) => {
+        const aOver = a.need_by_date && a.need_by_date < today;
+        const bOver = b.need_by_date && b.need_by_date < today;
+        if (aOver !== bOver) return aOver ? -1 : 1;
+        if (a.need_by_date && b.need_by_date) return a.need_by_date.localeCompare(b.need_by_date);
+        if (a.need_by_date) return -1;
+        if (b.need_by_date) return 1;
+        return 0;
+      });
+
+      document.getElementById('fwoCount').textContent = open.length;
+
+      if (!open.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="fwo-empty">No open field work orders.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = open.map(w => {
+        const isOverdue = w.need_by_date && w.need_by_date < today;
+        const statusLabel = { requested: 'Requested', in_shop: 'In Shop' }[w.status] || w.status;
+        const statusCls   = `fwo-status-badge fwo-status-${w.status}`;
+        const needBy = w.need_by_date ? fmtDate(w.need_by_date) : '—';
+        return `<tr>
+          <td style="font-size:0.75rem;color:#6b7280">${w.wo_number || '—'}</td>
+          <td><span class="job-name" style="font-size:0.8rem">${projMap[w.project] || '—'}</span></td>
+          <td class="${isOverdue ? 'fwo-overdue' : ''}">${w.description || '—'}</td>
+          <td style="font-size:0.78rem;color:#6b7280">${w.room_name || '—'}</td>
+          <td><span class="${statusCls}">${statusLabel}</span></td>
+          <td class="${isOverdue ? 'fwo-overdue' : ''} delivery">${needBy}</td>
+        </tr>`;
+      }).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="error-msg">Failed to load FWOs: ${e.message}</td></tr>`;
+    }
+  }
+
   // ── Load ───────────────────────────────────────────────────
   async function load() {
     document.getElementById('reportDate').textContent =
@@ -472,6 +582,8 @@
       document.getElementById('tableBody').innerHTML =
         `<tr><td colspan="8" class="error-msg">Failed to load: ${e.message}</td></tr>`;
     }
+
+    loadFWOs();
   }
 
   load();
