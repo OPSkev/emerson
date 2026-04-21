@@ -803,10 +803,11 @@
     const el = document.getElementById('deptRevRow');
     try {
       const now = new Date();
-      const monthDue = `${now.getFullYear()}.${now.getMonth() + 1}`;
+      const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
 
       const records = await fetchAll(PROD_BASE, T.woSteps, {
-        filterByFormula: `AND({Step Status(fx)}!="Complete",{Month Due}="${monthDue}")`,
+        filterByFormula: `AND({Step Status(fx)}!="Complete",{Finish (calc)}>="${firstOfMonth}",{Finish (calc)}<="${lastOfMonth}")`,
         fields: ['Departments','Step Unearned Revenue']
       });
 
