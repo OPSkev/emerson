@@ -257,6 +257,36 @@
     .dept-rev-amt   { font-size: 1rem; font-weight: 800; color: var(--text); }
     .dept-rev-steps { font-size: 0.6rem; color: var(--muted); }
 
+    /* ── WEEKLY EARNED BY DEPT ── */
+    .weekly-earned-table {
+      width: 100%; border-collapse: collapse; margin-bottom: 16px;
+      font-size: 0.75rem;
+    }
+    .weekly-earned-table th {
+      text-align: right; padding: 5px 10px; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .weekly-earned-table th:first-child { text-align: left; }
+    .weekly-earned-table td {
+      text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }
+    .weekly-earned-table td:first-child {
+      text-align: left; font-weight: 700; font-size: 0.68rem;
+    }
+    .weekly-earned-table tr:last-child td { border-bottom: none; }
+    .weekly-earned-table .week-total {
+      font-weight: 800; color: var(--text);
+    }
+    .weekly-earned-table .dept-total-row td {
+      background: var(--surface2); font-weight: 800; font-size: 0.72rem;
+      border-top: 1px solid var(--border);
+    }
+    .wet-zero { color: var(--dim); }
+    .wet-amt { color: var(--text); }
+    .wet-today { background: rgba(59,130,246,0.07); }
+
     /* ── MATERIAL RISK ── */
     .risk-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -436,6 +466,10 @@
     <div class="loading">Loading…</div>
   </div>
   <div class="dept-rev-row" id="deptRevRow"></div>
+
+  <!-- WEEKLY EARNED BY DEPT -->
+  <div class="section-label">Earned Revenue by Department — This Week</div>
+  <div id="weeklyEarnedByDept"><div class="loading">Loading…</div></div>
 
   <!-- SCHEDULE HEALTH -->
   <div class="section-label">Schedule Health</div>
@@ -1175,6 +1209,102 @@
   }
 
   // ── LOAD ALL ─────────────────────────────────────────────────
+  // ── WEEKLY EARNED REVENUE BY DEPT ────────────────────────────
+  async function loadWeeklyEarnedByDept() {
+    const container = document.getElementById('weeklyEarnedByDept');
+    try {
+      // Build Mon–Fri of the current week
+      const now = new Date();
+      const day = now.getDay(); // 0=Sun,1=Mon...
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      monday.setHours(0,0,0,0);
+
+      const days = [];
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days.push(d.toISOString().slice(0,10));
+      }
+      const weekStart = days[0];
+      const weekEnd   = days[4];
+      const todayStr  = now.toISOString().slice(0,10);
+
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Step Status(fx)}!="Complete",{Finish (calc)}>="${weekStart}",{Finish (calc)}<="${weekEnd}")`,
+        fields: ['Departments','Step Unearned Revenue','Finish (calc)']
+      });
+
+      // Build [dept][date] totals
+      const totals = {};
+      SHOP_DEPTS.forEach(d => { totals[d] = {}; days.forEach(date => { totals[d][date] = 0; }); });
+
+      records.forEach(r => {
+        const f = r.fields;
+        const rev  = f['Step Unearned Revenue'] || 0;
+        const date = (f['Finish (calc)'] || '').slice(0,10);
+        const deptIds = Array.isArray(f['Departments']) ? f['Departments'] : [];
+        deptIds.forEach(dId => {
+          const dName = DEPT_ID_MAP[dId];
+          if (dName && totals[dName] && date in totals[dName]) {
+            totals[dName][date] += rev;
+          }
+        });
+      });
+
+      // Only show depts that have any value this week
+      const activeDepts = SHOP_DEPTS.filter(d => days.some(date => totals[d][date] > 0));
+
+      if (!activeDepts.length) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:12px 0">No scheduled steps this week.</div>';
+        return;
+      }
+
+      const dayLabels = days.map(d => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      });
+
+      // Header row
+      let html = `<table class="weekly-earned-table"><thead><tr>
+        <th>Dept</th>
+        ${days.map((d,i) => `<th class="${d===todayStr?'wet-today':''}">${dayLabels[i]}</th>`).join('')}
+        <th>Week Total</th>
+      </tr></thead><tbody>`;
+
+      // Dept rows
+      activeDepts.forEach(dept => {
+        const color = DEPT_COLORS[dept] || '#6b7280';
+        const weekTotal = days.reduce((s, d) => s + totals[dept][d], 0);
+        html += `<tr>
+          <td style="border-left:3px solid ${color};padding-left:8px">${dept}</td>
+          ${days.map(d => {
+            const amt = totals[dept][d];
+            const isToday = d === todayStr;
+            return `<td class="${isToday?'wet-today':''} ${amt>0?'wet-amt':'wet-zero'}">${amt > 0 ? fmt$(Math.round(amt)) : '–'}</td>`;
+          }).join('')}
+          <td class="week-total">${weekTotal > 0 ? fmt$(Math.round(weekTotal)) : '–'}</td>
+        </tr>`;
+      });
+
+      // Column totals row
+      html += `<tr class="dept-total-row">
+        <td>All Depts</td>
+        ${days.map(d => {
+          const daySum = activeDepts.reduce((s, dept) => s + totals[dept][d], 0);
+          const isToday = d === todayStr;
+          return `<td class="${isToday?'wet-today':''}">${daySum > 0 ? fmt$(Math.round(daySum)) : '–'}</td>`;
+        }).join('')}
+        <td>${fmt$(Math.round(activeDepts.reduce((s, dept) => s + days.reduce((ss, d) => ss + totals[dept][d], 0), 0)))}</td>
+      </tr>`;
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    } catch(e) {
+      container.innerHTML = `<div class="error-msg">Weekly earned failed: ${e.message}</div>`;
+    }
+  }
+
   async function loadAll() {
     const btn = document.getElementById('refreshBtn');
     btn.classList.add('spinning');
@@ -1183,6 +1313,7 @@
     await Promise.all([
       loadRevenue(),
       loadDeptRevenue(),
+      loadWeeklyEarnedByDept(),
       loadShopFloor(),
       loadMaterialRisk(),
       loadMaterials(),
