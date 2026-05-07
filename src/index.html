@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emerson — Command Center</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1f2e;
+      --surface2: #222840;
+      --border: rgba(255,255,255,0.08);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --dim: #374151;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+      --orange: #f97316;
+      --teal: #14b8a6;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ── PAGE LAYOUT ── */
+    .page-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+    }
+    .main-col { flex: 1; min-width: 0; }
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      padding: 20px 16px 40px;
+      position: sticky;
+      top: 56px;
+      max-height: calc(100vh - 56px);
+      overflow-y: auto;
+      border-left: 1px solid var(--border);
+    }
+    @media (max-width: 900px) {
+      .page-wrap { flex-direction: column; }
+      .sidebar { width: 100%; position: static; max-height: none; border-left: none; border-top: 1px solid var(--border); padding-top: 0; }
+    }
+
+    /* ── INSTALL SIDEBAR ── */
+    .sidebar-rev-card {
+      background: var(--surface);
+      border: 1px solid #2563eb44;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .sidebar-rev-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #60a5fa; margin-bottom: 6px; }
+    .sidebar-rev-value { font-size: 1.6rem; font-weight: 800; color: #60a5fa; line-height: 1; }
+    .sidebar-rev-sub   { font-size: 0.65rem; color: var(--muted); margin-top: 5px; }
+    .sidebar-rev-bar-wrap { background: var(--surface2); border-radius: 4px; height: 4px; margin-top: 10px; overflow: hidden; }
+    .sidebar-rev-bar      { height: 100%; background: #3b82f6; border-radius: 4px; transition: width 0.4s; }
+
+    .install-header {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--teal);
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .install-header::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); flex-shrink: 0; }
+
+    .install-section-label {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 16px 0 8px;
+    }
+
+    .install-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--teal);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .install-card.upcoming { border-left-color: var(--dim); }
+
+    .install-job { font-size: 0.82rem; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .install-desc { font-size: 0.68rem; color: var(--muted); margin-bottom: 8px; }
+    .install-date { font-size: 0.65rem; color: var(--muted); margin-top: 6px; }
+    .install-date.soon { color: var(--yellow); font-weight: 600; }
+    .install-date.overdue { color: var(--red); font-weight: 600; }
+
+    .install-pct-row { display: flex; align-items: center; gap: 8px; }
+    .install-pct-label { font-size: 0.68rem; font-weight: 700; color: var(--teal); flex-shrink: 0; }
+    .install-bar-wrap { flex: 1; background: var(--dim); border-radius: 4px; height: 5px; overflow: hidden; }
+    .install-bar { height: 100%; border-radius: 4px; background: var(--teal); transition: width 0.4s; }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+    .logo span { color: var(--blue); }
+    .tagline { font-size: 0.65rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .last-updated { font-size: 0.65rem; color: var(--muted); }
+    .refresh-btn {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); padding: 6px 12px; border-radius: 6px;
+      font-size: 0.72rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .refresh-btn:hover { background: var(--dim); }
+    .refresh-btn.spinning { opacity: 0.6; pointer-events: none; }
+
+    /* ── LAYOUT ── */
+    .main { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+
+    /* ── SECTION HEADERS ── */
+    .section-label {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 24px 0 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── REVENUE STRIP ── */
+    .revenue-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .rev-col { display: flex; flex-direction: column; gap: 10px; }
+    @media (max-width: 700px) { .revenue-strip { grid-template-columns: repeat(2, 1fr); } }
+
+    .rev-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .rev-card .label { font-size: 0.62rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .rev-card .value { font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1; }
+    .rev-card .sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+    .rev-card.highlight { border-color: var(--blue); }
+    .rev-card .value.green { color: var(--green); }
+    .rev-card .value.yellow { color: var(--yellow); }
+    .rev-card .value.red { color: var(--red); }
+
+    .progress-bar-wrap { margin-top: 8px; background: var(--dim); border-radius: 4px; height: 4px; overflow: hidden; }
+    .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .progress-bar.green { background: var(--green); }
+    .progress-bar.yellow { background: var(--yellow); }
+    .progress-bar.red { background: var(--red); }
+
+    /* ── DEPT CARDS ── */
+    .dept-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 500px) { .dept-grid { grid-template-columns: 1fr; } }
+
+    .dept-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .dept-header {
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-left: 3px solid var(--accent, var(--blue));
+      cursor: pointer;
+    }
+    .dept-header:hover { background: var(--surface2); }
+    .dept-name { font-size: 0.85rem; font-weight: 700; }
+    .dept-meta { display: flex; align-items: center; gap: 8px; }
+    .dept-count {
+      font-size: 0.62rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; background: var(--surface2); color: var(--muted);
+    }
+    .dept-chevron { font-size: 0.65rem; color: var(--muted); transition: transform 0.2s; }
+    .dept-card.open .dept-chevron { transform: rotate(180deg); }
+
+    .dept-body { display: none; border-top: 1px solid var(--border); }
+    .dept-card.open .dept-body { display: block; }
+
+    .step-row {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .step-row:last-child { border-bottom: none; }
+    .step-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 5px;
+    }
+    .dot-active { background: var(--green); }
+    .dot-pending { background: var(--yellow); }
+    .dot-blocked { background: var(--red); }
+    .dot-scheduled { background: var(--blue); }
+
+    .step-info { flex: 1; min-width: 0; }
+    .step-wo { font-size: 0.68rem; color: var(--muted); margin-bottom: 2px; }
+    .step-name { font-size: 0.8rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .step-due { font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+    .step-due.overdue { color: var(--red); font-weight: 600; }
+
+    .dept-empty { padding: 16px 14px; font-size: 0.78rem; color: var(--muted); font-style: italic; }
+
+    .upcoming-toggle {
+      padding: 8px 14px; font-size: 0.68rem; font-weight: 700; color: var(--muted);
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      border-top: 1px solid var(--border); background: var(--surface2);
+      user-select: none;
+    }
+    .upcoming-toggle:hover { color: var(--text); }
+    .upcoming-toggle .uc { transition: transform 0.2s; display: inline-block; }
+    .upcoming-toggle.open .uc { transform: rotate(180deg); }
+    .upcoming-body { display: none; }
+    .upcoming-body.open { display: block; }
+
+    /* ── DEPT REVENUE ROW ── */
+    .dept-rev-row {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+    }
+    .dept-rev-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 100px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .dept-rev-name  { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .dept-rev-amt   { font-size: 1rem; font-weight: 800; color: var(--text); }
+    .dept-rev-steps { font-size: 0.6rem; color: var(--muted); }
+
+    /* ── WEEKLY EARNED BY DEPT ── */
+    .weekly-earned-table {
+      width: 100%; border-collapse: collapse; margin-bottom: 16px;
+      font-size: 0.75rem;
+    }
+    .weekly-earned-table th {
+      text-align: right; padding: 5px 10px; font-size: 0.6rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .weekly-earned-table th:first-child { text-align: left; }
+    .weekly-earned-table td {
+      text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }
+    .weekly-earned-table td:first-child {
+      text-align: left; font-weight: 700; font-size: 0.68rem;
+    }
+    .weekly-earned-table tr:last-child td { border-bottom: none; }
+    .weekly-earned-table .week-total {
+      font-weight: 800; color: var(--text);
+    }
+    .weekly-earned-table .dept-total-row td {
+      background: var(--surface2); font-weight: 800; font-size: 0.72rem;
+      border-top: 1px solid var(--border);
+    }
+    .wet-zero { color: var(--dim); }
+    .wet-amt { color: var(--text); }
+    .wet-today { background: rgba(59,130,246,0.07); }
+
+    /* ── MATERIAL RISK ── */
+    .risk-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .risk-title {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--red);
+    }
+    .risk-count {
+      font-size: 0.62rem; font-weight: 700; background: #2d0a0a;
+      color: var(--red); border: 1px solid #7f1d1d66;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .risk-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .risk-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--red);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .risk-card.amber { border-left-color: var(--yellow); }
+    .risk-card.blue  { border-left-color: #3b82f6; }
+    .risk-card-top   { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 3px; }
+    .risk-card-job   { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+    .risk-card-due   { font-size: 0.68rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+    .risk-card-due.red    { color: var(--red); }
+    .risk-card-due.amber  { color: var(--yellow); }
+    .risk-card-due.blue   { color: #60a5fa; }
+    .risk-card-desc  { font-size: 0.65rem; color: var(--muted); margin-bottom: 4px; }
+    .risk-card-po    { font-size: 0.63rem; color: var(--muted); font-style: italic; }
+    .risk-card-badges { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+    .risk-badge {
+      font-size: 0.58rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .risk-badge-notordered  { background: #2d0a0a; color: var(--red); border: 1px solid #7f1d1d66; }
+    .risk-badge-ordered     { background: #2d1f00; color: var(--yellow); border: 1px solid #78350f66; }
+    .risk-badge-partial     { background: #1a2a1a; color: #4ade80; border: 1px solid #16a34a44; }
+    .risk-badge-inbounded   { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb44; }
+
+    /* ── POs / MATERIALS ── */
+    .po-summary-bar {
+      display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .po-summary-chip {
+      padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; font-weight: 700;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .po-chip-blocking { background: #2d0a0a; color: var(--red); border: 1px solid #7f1d1d66; }
+    .po-chip-week     { background: #2d1f00; color: var(--yellow); border: 1px solid #78350f66; }
+    .po-chip-ordered  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+    .po-group { margin-bottom: 10px; }
+    .po-group-header {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      padding: 6px 0 6px 4px; color: var(--muted);
+      display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+    }
+    .po-group-header .pg-label { flex: 1; }
+    .po-group-header .pg-arrow { transition: transform 0.2s; }
+    .po-group-header.collapsed .pg-arrow { transform: rotate(-90deg); }
+    .po-group-body { display: flex; flex-direction: column; gap: 6px; }
+    .po-group-body.hidden { display: none; }
+
+    .po-group-header.blocking { color: var(--red); }
+    .po-group-header.week     { color: var(--yellow); }
+
+    .po-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 2px 8px;
+    }
+    .po-card.is-blocking { border-left: 3px solid var(--red); }
+    .po-card.is-week     { border-left: 3px solid var(--yellow); }
+
+    .po-card-job   { font-size: 0.78rem; font-weight: 700; color: var(--text); grid-column: 1; }
+    .po-card-desc  { font-size: 0.68rem; color: var(--muted); grid-column: 1; margin-top: 1px; }
+    .po-card-eta   { font-size: 0.7rem; font-weight: 700; text-align: right; grid-row: 1; grid-column: 2; align-self: start; }
+    .po-card-meta  { font-size: 0.72rem; color: var(--muted); text-align: right; grid-row: 2; grid-column: 2; }
+    .po-card-num   { grid-column: 1 / -1; display: block; width: 100%; text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary, #94a3b8); letter-spacing: 0.5px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+    .po-card-eta.overdue { color: var(--red); }
+    .po-card-eta.week    { color: var(--yellow); }
+    .po-card-eta.future  { color: var(--muted); }
+    .po-card-eta.noeta   { color: var(--red); }
+
+    /* ── SCHEDULE HEALTH ── */
+    .health-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .health-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .health-card .h-count { font-size: 2rem; font-weight: 800; line-height: 1; }
+    .health-card .h-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .health-card { cursor: pointer; transition: filter 0.15s, border-color 0.15s; }
+    .health-card:hover { filter: brightness(1.15); }
+    .health-card.active-filter { box-shadow: 0 0 0 2px currentColor inset; }
+    .health-card.behind.active-filter   { border-color: var(--red); }
+    .health-card.at-risk.active-filter  { border-color: var(--orange); }
+    .health-card.on-track.active-filter { border-color: var(--green); }
+    .health-card.behind .h-count  { color: var(--red); }
+    .health-card.at-risk .h-count { color: var(--orange); }
+    .health-card.on-track .h-count { color: var(--green); }
+
+    .wo-list { display: flex; flex-direction: column; gap: 6px; }
+    .wo-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--row-accent, var(--border));
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .wo-name { flex: 1; font-size: 0.8rem; font-weight: 600; color: var(--text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wo-pct { font-size: 0.72rem; color: var(--muted); flex-shrink: 0; }
+    .wo-date { font-size: 0.65rem; color: var(--muted); flex-shrink: 0; text-align: right; }
+    .wo-date.overdue { color: var(--red); font-weight: 600; }
+
+    /* ── CRM LINK ── */
+    .crm-link-wrap { margin-top: 8px; }
+    .crm-link {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .crm-link:hover { background: var(--surface2); border-color: var(--blue); }
+    .crm-link .arrow { color: var(--blue); font-size: 1rem; }
+
+    /* ── LOADING / ERROR ── */
+    .loading { text-align: center; padding: 24px; color: var(--muted); font-size: 0.8rem; }
+    .error-msg { text-align: center; padding: 16px; color: var(--red); font-size: 0.78rem; background: #2e0a0a; border-radius: 8px; border: 1px solid #ef444433; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">EMER<span>SON</span></div>
+      <div class="tagline">EF San Juan · Cabinetry</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">–</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="page-wrap">
+<div class="main-col">
+<div class="main">
+
+  <!-- REVENUE -->
+  <div class="section-label">Revenue</div>
+  <div class="revenue-strip" id="revenueStrip">
+    <div class="loading">Loading…</div>
+  </div>
+  <div class="dept-rev-row" id="deptRevRow"></div>
+
+  <!-- WEEKLY EARNED BY DEPT -->
+  <div class="section-label">Earned Revenue by Department — This Week</div>
+  <div id="weeklyEarnedByDept"><div class="loading">Loading…</div></div>
+
+  <!-- SCHEDULE HEALTH -->
+  <div class="section-label">Schedule Health</div>
+  <div id="scheduleHealth">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- SHOP FLOOR -->
+  <div class="section-label">Shop Floor</div>
+  <div class="dept-grid" id="deptGrid">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- MATERIALS & POs -->
+  <div class="section-label">Materials &amp; POs</div>
+  <div id="matRisk"></div>
+  <div class="po-list" id="poList">
+    <div class="loading">Loading…</div>
+  </div>
+
+  <!-- CRM LINK -->
+  <div class="section-label">Pipeline &amp; Pre-Production</div>
+  <div class="crm-link-wrap">
+    <a class="crm-link" href="https://airtable.com/app29rBmk81P2idlq/pagkQ3VfsSRbMILGM" target="_blank">
+      Open CRM Dashboard <span class="arrow">→</span>
+    </a>
+  </div>
+
+</div><!-- end .main -->
+</div><!-- end .main-col -->
+
+<!-- INSTALL SIDEBAR -->
+<div class="sidebar">
+  <div id="sidebarRev"><div class="loading">Loading…</div></div>
+  <div class="install-header">Install Tracker</div>
+  <div id="installSidebar"><div class="loading">Loading…</div></div>
+</div>
+
+</div><!-- end .page-wrap -->
+
+<script>
+  const PROD_TOKEN  = 'pat0KeG33iHuNNwPm.a4413a9d2618ad3a6656ccbfb52e2d7f28e76b464451e792e5620ab879d8e7c3';
+  const PROD_BASE   = 'appqIXms8VnRTFv3b';
+  const CRM_BASE    = 'app29rBmk81P2idlq';
+
+  // Table IDs
+  const T = {
+    earnedRevGoal : 'tblZTSZC4IE5Si9re',
+    earnedRev     : 'tblXOB0e6wqUrvLCH',
+    woSteps       : 'tblmPU2hWwIvbrD5V',
+    workOrders    : 'tblHuJKm0Sd3MDtzc',
+    poSync        : 'tbl2r44LCU06ldiBi',
+    matRequests   : 'tblatfWe6zHOZkRnr',
+  };
+  // Revenue uses workOrders table (Billed? + Billed Complete Date)
+
+  const SHOP_DEPTS = ['CNC', 'Build', 'Hardware', 'Paint/Finish', 'Sand/Prep', 'Warehouse'];
+  const DEPT_COLORS = {
+    'CNC'         : '#3b82f6',
+    'Build'       : '#22c55e',
+    'Hardware'    : '#f97316',
+    'Paint/Finish': '#ec4899',
+    'Sand/Prep'   : '#a78bfa',
+    'Warehouse'   : '#14b8a6',
+  };
+  // Dept record ID → display name
+  const DEPT_ID_MAP = {
+    'recVx7ME4yGKYIxu1': 'CNC',
+    'recF0AoJJFbM57rA5': 'Build',
+    'recrb7Qhe5I1plBUn': 'Hardware',
+    'recxg61cepsn2a6F0': 'Paint/Finish',
+    'recTrBo6PlX3R2YAV': 'Sand/Prep',
+    'reckp0orCqklJLb1a': 'Warehouse',
+  };
+
+  // ── API helper ──────────────────────────────────────────────
+  function buildUrl(baseId, tableId, params = {}) {
+    const url = new URL(`https://api.airtable.com/v0/${baseId}/${tableId}`);
+    Object.entries(params).forEach(([k, v]) => {
+      if (k === 'fields' && Array.isArray(v)) {
+        v.forEach(f => url.searchParams.append('fields[]', f));
+      } else if (k === 'sort' && Array.isArray(v)) {
+        v.forEach((s, i) => {
+          url.searchParams.append(`sort[${i}][field]`, s.field);
+          url.searchParams.append(`sort[${i}][direction]`, s.direction);
+        });
+      } else {
+        url.searchParams.set(k, v);
+      }
+    });
+    return url;
+  }
+
+  async function fetchAirtable(baseId, tableId, params = {}) {
+    const url = buildUrl(baseId, tableId, params);
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${PROD_TOKEN}` }
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`${res.status}: ${txt.slice(0,120)}`);
+    }
+    return res.json();
+  }
+
+  async function fetchAll(baseId, tableId, params = {}) {
+    let records = [], offset = null;
+    do {
+      const p = { ...params, ...(offset ? { offset } : {}) };
+      const data = await fetchAirtable(baseId, tableId, p);
+      records = records.concat(data.records || []);
+      offset = data.offset || null;
+    } while (offset);
+    return records;
+  }
+
+  // ── Formatters ───────────────────────────────────────────────
+  function fmt$(n) {
+    if (!n && n !== 0) return '–';
+    return '$' + Math.round(n).toLocaleString();
+  }
+  function fmtDate(d) {
+    if (!d) return '–';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function daysFromNow(d) {
+    if (!d) return null;
+    const diff = new Date(d) - new Date();
+    return Math.round(diff / 86400000);
+  }
+  function currentWeekNum() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    return Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+  }
+  function currentYear() { return new Date().getFullYear(); }
+
+  // ── REVENUE ─────────────────────────────────────────────────
+  const MONTHLY_GOAL   = 250000;
+  const GOAL_CUSTOM    = MONTHLY_GOAL * 0.65; // $162,500
+  const GOAL_BROKERED  = MONTHLY_GOAL * 0.25; // $62,500
+  const GOAL_INSTALL   = MONTHLY_GOAL * 0.10; // $25,000
+
+  async function loadRevenue() {
+    const strip = document.getElementById('revenueStrip');
+    try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthStr = String(now.getMonth() + 1).padStart(2,'0');
+      const monthStart = `${year}-${monthStr}-01`;
+      const monthEnd   = `${year}-${monthStr}-31`;
+      const monthName  = now.toLocaleDateString('en-US', { month: 'long' });
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0,10);
+
+      // Billed MTD
+      const billedRecs = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND({Billed?}="Yes",IS_AFTER({Billed Complete Date},"${prevMonthEnd}"),{Billed Complete Date}<="${monthEnd}")`,
+        fields: ['Pre-Tax Revenue', 'Category', 'Billed Complete Date']
+      });
+
+      // Scheduled this month — active WOs with Scheduled Completion Date in current month
+      const scheduledRecs = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),{Scheduled Completion Date}>="${monthStart}",{Scheduled Completion Date}<="${monthEnd}")`,
+        fields: ['Pre-Tax Revenue', 'Scheduled Completion Date']
+      });
+
+      let custom = 0, brokered = 0, install = 0;
+      billedRecs.forEach(r => {
+        const f = r.fields;
+        const amt = f['Pre-Tax Revenue'] || 0;
+        const cats = Array.isArray(f['Category']) ? f['Category'].join(',') : (f['Category'] || '');
+        if (cats.includes('Install'))                                              install  += amt;
+        else if (cats.includes('Cabinet Brokerage') || cats.includes('Brokerage')) brokered += amt;
+        else                                                                        custom   += amt;
+      });
+
+      const scheduled = scheduledRecs.reduce((sum, r) => sum + (r.fields['Pre-Tax Revenue'] || 0), 0);
+      const total     = custom + brokered + install;
+      const pctColor  = (p) => p >= 90 ? 'green' : p >= 70 ? 'yellow' : 'red';
+
+      const revCard = (label, actual, goal) => {
+        const pct = goal > 0 ? Math.round((actual / goal) * 100) : 0;
+        return `
+          <div class="rev-card">
+            <div class="label">${label}</div>
+            <div class="value">${fmt$(actual)}</div>
+            <div class="sub">of ${fmt$(goal)} goal</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar ${pctColor(pct)}" style="width:${Math.min(pct,100)}%"></div>
+            </div>
+          </div>`;
+      };
+
+      const totalPct = Math.round((total / MONTHLY_GOAL) * 100);
+      const schedPct = Math.round((scheduled / MONTHLY_GOAL) * 100);
+      strip.innerHTML = `
+        <div class="rev-col">
+          <div class="rev-card highlight">
+            <div class="label">MTD Billed · ${monthName}</div>
+            <div class="value ${pctColor(totalPct)}">${fmt$(total)}</div>
+            <div class="sub">${totalPct}% of ${fmt$(MONTHLY_GOAL)} goal</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar ${pctColor(totalPct)}" style="width:${Math.min(totalPct,100)}%"></div>
+            </div>
+          </div>
+          <div class="rev-card" style="border-color:#2563eb44;">
+            <div class="label" style="color:#60a5fa;">Scheduled · ${monthName}</div>
+            <div class="value" style="color:#60a5fa;">${fmt$(scheduled)}</div>
+            <div class="sub">${scheduledRecs.length} WOs due this month</div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar" style="width:${Math.min(schedPct,100)}%; background:#3b82f6;"></div>
+            </div>
+          </div>
+        </div>
+        ${revCard('Custom', custom, GOAL_CUSTOM)}
+        ${revCard('Brokered', brokered, GOAL_BROKERED)}
+        ${revCard('Install', install, GOAL_INSTALL)}
+      `;
+    } catch (e) {
+      strip.innerHTML = `<div class="error-msg">Revenue failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── SHOP FLOOR ───────────────────────────────────────────────
+  async function loadShopFloor() {
+    const grid = document.getElementById('deptGrid');
+    try {
+      const today = new Date().toISOString().slice(0,10);
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Step Status(fx)}!="Complete", {Finish (calc)}>="2026-01-01")`,
+        fields: ['Name','Step Status(fx)','Departments','Work Order Number','Finish (calc)','Priority'],
+        maxRecords: 300
+      });
+
+      // Group by department using linked record IDs
+      const byDept = {};
+      SHOP_DEPTS.forEach(d => byDept[d] = []);
+
+      records.forEach(r => {
+        const deptIds = r.fields['Departments'] || [];
+        const deptName = DEPT_ID_MAP[deptIds[0]];
+        if (deptName && byDept[deptName] !== undefined) {
+          byDept[deptName].push(r);
+        }
+      });
+
+      grid.innerHTML = SHOP_DEPTS.map(dept => {
+        const steps = byDept[dept];
+        const color = DEPT_COLORS[dept] || '#6b7280';
+        // Sort: In Progress first, then by finish date
+        steps.sort((a,b) => {
+          const aIP = (a.fields['Step Status(fx)'] || '').includes('Progress') ? 0 : 1;
+          const bIP = (b.fields['Step Status(fx)'] || '').includes('Progress') ? 0 : 1;
+          if (aIP !== bIP) return aIP - bIP;
+          return (a.fields['Finish (calc)'] || '').localeCompare(b.fields['Finish (calc)'] || '');
+        });
+
+        // Split into this week vs upcoming
+        const now = new Date();
+        const weekEnd = new Date(now);
+        weekEnd.setDate(now.getDate() + (6 - now.getDay())); // Sunday
+        weekEnd.setHours(23,59,59,0);
+        const weekEndStr = weekEnd.toISOString().slice(0,10);
+
+        const thisWeek = steps.filter(r => (r.fields['Finish (calc)'] || '') <= weekEndStr);
+        const upcoming = steps.filter(r => (r.fields['Finish (calc)'] || '') > weekEndStr);
+
+        const renderStep = (r) => {
+          const f = r.fields;
+          const status = f['Step Status(fx)'] || '';
+          const finish = f['Finish (calc)'];
+          const days = daysFromNow(finish);
+          const dotClass = status.includes('Progress') ? 'dot-active'
+            : status.includes('Block') ? 'dot-blocked'
+            : 'dot-pending';
+          const dateClass = days !== null && days < 0 ? 'overdue' : '';
+          const dateText = finish
+            ? (days !== null && days < 0 ? `${Math.abs(days)}d overdue` : fmtDate(finish))
+            : '';
+          const nameParts = (f['Name'] || '').split('||');
+          const stepDesc = nameParts[0].trim();
+          const jobParts = nameParts[1] ? nameParts[1].split('|').map(s => s.trim()) : [];
+          const jobName = jobParts[0] || '';
+          const roomName = jobParts[2] || '';
+          return `
+            <div class="step-row">
+              <div class="step-status-dot ${dotClass}"></div>
+              <div class="step-info">
+                <div class="step-wo">${jobName}${roomName ? ` · ${roomName}` : ''}</div>
+                <div class="step-name">${stepDesc || '–'}</div>
+                ${dateText ? `<div class="step-due ${dateClass}">${dateText}</div>` : ''}
+              </div>
+            </div>`;
+        };
+
+        const deptId = dept.replace(/\W/g,'');
+        const rows = steps.length === 0
+          ? `<div class="dept-empty">No active steps</div>`
+          : `
+            ${thisWeek.length > 0 ? thisWeek.map(renderStep).join('') : '<div class="dept-empty">Nothing scheduled this week</div>'}
+            ${upcoming.length > 0 ? `
+              <div class="upcoming-toggle" id="tog-${deptId}" onclick="toggleUpcoming('${deptId}')">
+                <span class="uc">▼</span> ${upcoming.length} upcoming
+              </div>
+              <div class="upcoming-body" id="upb-${deptId}">
+                ${upcoming.map(renderStep).join('')}
+              </div>` : ''}
+          `;
+
+        return `
+          <div class="dept-card open" style="">
+            <div class="dept-header" style="border-left-color:${color}" onclick="toggleDept(this)">
+              <span class="dept-name">${dept}</span>
+              <div class="dept-meta">
+                <span class="dept-count">${steps.length}</span>
+                <span class="dept-chevron">▼</span>
+              </div>
+            </div>
+            <div class="dept-body">${rows}</div>
+          </div>`;
+      }).join('');
+
+    } catch (e) {
+      grid.innerHTML = `<div class="error-msg">Shop floor failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── DEPT REVENUE ─────────────────────────────────────────────
+  async function loadDeptRevenue() {
+    const el = document.getElementById('deptRevRow');
+    try {
+      const now = new Date();
+      const firstOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+      const lastOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).toISOString().slice(0,10);
+
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Step Status(fx)}!="Complete",{Finish (calc)}>="${firstOfMonth}",{Finish (calc)}<="${lastOfMonth}")`,
+        fields: ['Departments','Step Unearned Revenue']
+      });
+
+      // Sum unearned revenue by department
+      const deptTotals = {};
+      const deptCounts = {};
+      records.forEach(r => {
+        const f = r.fields;
+        const rev = f['Step Unearned Revenue'] || 0;
+        const depts = Array.isArray(f['Departments']) ? f['Departments'] : [];
+        depts.forEach(dId => {
+          deptTotals[dId] = (deptTotals[dId] || 0) + rev;
+          deptCounts[dId] = (deptCounts[dId] || 0) + 1;
+        });
+      });
+
+      // Render in dept order
+      const deptOrder = Object.keys(DEPT_ID_MAP);
+      const cards = deptOrder
+        .filter(id => deptTotals[id] > 0)
+        .map(id => `
+          <div class="dept-rev-card">
+            <div class="dept-rev-name">${DEPT_ID_MAP[id]}</div>
+            <div class="dept-rev-amt">${fmt$(Math.round(deptTotals[id]))}</div>
+            <div class="dept-rev-steps">${deptCounts[id]} step${deptCounts[id] !== 1 ? 's' : ''}</div>
+          </div>`).join('');
+
+      el.innerHTML = cards || '';
+    } catch(e) {
+      el.innerHTML = `<div class="error-msg">Dept revenue failed: ${e.message}</div>`;
+    }
+  }
+
+  // ── MATERIAL RISK ────────────────────────────────────────────
+  async function loadMaterialRisk() {
+    const el = document.getElementById('matRisk');
+    try {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const in30  = new Date(today); in30.setDate(today.getDate() + 30);
+      const todayStr = today.toISOString().slice(0,10);
+      const in30Str  = in30.toISOString().slice(0,10);
+
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),NOT({Material Received }),{Scheduled Completion Date}>="${todayStr}",{Scheduled Completion Date}<="${in30Str}")`,
+        fields: ['Name','Work Order Status','Scheduled Completion Date','% Complete','PO Status','PO Details','Materials Ordered ','Material Received '],
+        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
+      });
+
+      if (records.length === 0) { el.innerHTML = ''; return; }
+
+      const cards = records.map(r => {
+        const f    = r.fields;
+        const nameParts = (f['Name'] || '').split('|');
+        const job  = nameParts[0].trim();
+        const desc = nameParts[2] ? nameParts[2].trim() : (nameParts[1] ? nameParts[1].trim() : '');
+        const days = daysFromNow(f['Scheduled Completion Date']);
+
+        const dueClass  = days <= 7 ? 'red' : days <= 14 ? 'amber' : 'blue';
+        const cardClass = days <= 7 ? '' : days <= 14 ? 'amber' : 'blue';
+        const dueLabel  = days === 0 ? 'Due today'
+          : days < 0  ? `${Math.abs(days)}d overdue`
+          : `${days}d · ${fmtDate(f['Scheduled Completion Date'])}`;
+
+        const ordered  = f['Materials Ordered '];
+        const poStatus = Array.isArray(f['PO Status']) ? f['PO Status'] : (f['PO Status'] ? [f['PO Status']] : []);
+        const poLines = (f['PO Details'] || '').split('\n').filter(l => l.trim());
+        const poNums  = poLines.map(l => l.split(':')[0].trim()).filter(Boolean).join(', ');
+        const poDetail = poLines.map(l => {
+          const parts = l.split('|');
+          if (parts.length >= 3) {
+            const vendor = parts[0].split(':')[1]?.trim() || parts[0].trim();
+            return `${vendor} — ${parts[2].trim()}`;
+          }
+          return l.trim();
+        }).join('; ');
+
+        const badges = poStatus.map(s => {
+          const s2 = s.toLowerCase();
+          const cls = s2.includes('not ord') || s2 === 'assigned' || s2 === 'pending' ? 'risk-badge-notordered'
+            : s2.includes('partial') ? 'risk-badge-partial'
+            : s2.includes('inbound') ? 'risk-badge-inbounded'
+            : 'risk-badge-ordered';
+          return `<span class="risk-badge ${cls}">${s}</span>`;
+        });
+        if (!ordered) badges.unshift(`<span class="risk-badge risk-badge-notordered">Not Ordered</span>`);
+
+        return `
+          <div class="risk-card ${cardClass}">
+            <div class="risk-card-top">
+              <div class="risk-card-job">${job}</div>
+              <div class="risk-card-due ${dueClass}">${dueLabel}</div>
+            </div>
+            <div class="risk-card-desc">${desc}</div>
+            ${poDetail ? `<div class="risk-card-po">${poDetail}</div>` : ''}
+            <div class="risk-card-badges">${badges.join('')}</div>
+            ${poNums ? `<div class="po-card-num">${poNums}</div>` : ''}
+          </div>`;
+      }).join('');
+
+      el.innerHTML = `
+        <div class="risk-header">
+          <span class="risk-title">⚠ Material Risk</span>
+          <span class="risk-count">${records.length} WO${records.length !== 1 ? 's' : ''} at risk</span>
+        </div>
+        <div class="risk-list">${cards}</div>`;
+
+    } catch(e) {
+      el.innerHTML = `<div class="error-msg">Material risk failed: ${e.message}</div>`;
+    }
+  }
+
+  // ── MATERIALS & POs ─────────────────────────────────────────
+  async function loadMaterials() {
+    const list = document.getElementById('poList');
+    try {
+      const records = await fetchAll(PROD_BASE, T.poSync, {
+        filterByFormula: `NOT(OR({PO Status}="Received", {PO Status}="Complete", {PO Status}="Cancelled"))`,
+        fields: ['NEW PO NUM','Job Name','Vendor(s)','PO Status','ETA','Description','Total Cost'],
+        sort: [{ field: 'ETA', direction: 'asc' }],
+        maxRecords: '100'
+      });
+
+      if (records.length === 0) {
+        list.innerHTML = `<div class="loading" style="padding:12px">No open POs</div>`;
+        return;
+      }
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      const in7 = new Date(today); in7.setDate(today.getDate() + 7);
+
+      const blocking = [], thisWeek = [], upcoming = [];
+
+      records.forEach(r => {
+        const f = r.fields;
+        const eta = f['ETA'] ? new Date(f['ETA'] + 'T00:00:00') : null;
+        const days = eta ? Math.round((eta - today) / 86400000) : null;
+        const bucket = (days === null || days < 0) ? 'blocking'
+          : days <= 7 ? 'week' : 'future';
+        const entry = { f, days, eta };
+        if (bucket === 'blocking') blocking.push(entry);
+        else if (bucket === 'week')  thisWeek.push(entry);
+        else                          upcoming.push(entry);
+      });
+
+      function renderCard(entry) {
+        const { f, days } = entry;
+        const job     = f['Job Name'] || f['NEW PO NUM'] || '–';
+        const desc    = f['Description'] || '';
+        const status  = f['PO Status'] || '–';
+        const vendor  = Array.isArray(f['Vendor(s)']) ? f['Vendor(s)'].join(', ') : (f['Vendor(s)'] || '–');
+        const cost    = f['Total Cost'] ? '$' + Number(f['Total Cost']).toLocaleString('en-US', {maximumFractionDigits:0}) : '';
+
+        let etaLabel, etaClass, cardClass = '';
+        if (days === null)     { etaLabel = 'No ETA';                etaClass = 'noeta'; cardClass = 'is-blocking'; }
+        else if (days < 0)     { etaLabel = `${Math.abs(days)}d late`; etaClass = 'overdue'; cardClass = 'is-blocking'; }
+        else if (days === 0)   { etaLabel = 'Today';                 etaClass = 'week'; cardClass = 'is-week'; }
+        else if (days <= 7)    { etaLabel = `${days}d`;              etaClass = 'week'; cardClass = 'is-week'; }
+        else                   { etaLabel = fmtDate(f['ETA']);       etaClass = 'future'; }
+
+        const poNum = f['NEW PO NUM'] || '';
+        const metaParts = [status];
+        if (vendor !== '–') metaParts.push(vendor);
+        if (cost) metaParts.push(cost);
+
+        return `
+          <div class="po-card ${cardClass}">
+            <div class="po-card-job">${job}</div>
+            <div class="po-card-eta ${etaClass}">${etaLabel}</div>
+            <div class="po-card-desc">${desc || '&nbsp;'}</div>
+            <div class="po-card-meta">${metaParts.join(' · ')}</div>
+            ${poNum ? `<div class="po-card-num">${poNum}</div>` : ''}
+          </div>`;
+      }
+
+      function renderGroup(label, items, cssClass, startCollapsed) {
+        if (items.length === 0) return '';
+        const collapseClass = startCollapsed ? 'collapsed' : '';
+        const bodyClass     = startCollapsed ? 'hidden' : '';
+        const id = 'pg-' + cssClass;
+        return `
+          <div class="po-group">
+            <div class="po-group-header ${cssClass} ${collapseClass}" onclick="togglePoGroup('${id}',this)">
+              <span class="pg-label">${label} (${items.length})</span>
+              <span class="pg-arrow">▾</span>
+            </div>
+            <div class="po-group-body ${bodyClass}" id="${id}">
+              ${items.map(renderCard).join('')}
+            </div>
+          </div>`;
+      }
+
+      const summaryBar = `
+        <div class="po-summary-bar">
+          ${blocking.length ? `<div class="po-summary-chip po-chip-blocking">● ${blocking.length} needs attention</div>` : ''}
+          ${thisWeek.length ? `<div class="po-summary-chip po-chip-week">● ${thisWeek.length} arriving this week</div>` : ''}
+          ${upcoming.length ? `<div class="po-summary-chip po-chip-ordered">● ${upcoming.length} ordered</div>` : ''}
+        </div>`;
+
+      list.innerHTML = summaryBar
+        + renderGroup('Needs Attention — Overdue or No ETA', blocking, 'blocking', false)
+        + renderGroup('Arriving This Week', thisWeek, 'week', false)
+        + renderGroup('Ordered / Upcoming', upcoming, 'ordered', true);
+
+    } catch (e) {
+      list.innerHTML = `<div class="error-msg">Materials failed to load: ${e.message}</div>`;
+    }
+  }
+
+  function togglePoGroup(id, header) {
+    const body = document.getElementById(id);
+    if (!body) return;
+    const hidden = body.classList.toggle('hidden');
+    header.classList.toggle('collapsed', hidden);
+  }
+
+  // ── SCHEDULE HEALTH ──────────────────────────────────────────
+  async function loadScheduleHealth() {
+    const container = document.getElementById('scheduleHealth');
+    try {
+      const records = await fetchAll(PROD_BASE, T.workOrders, {
+        filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),{Scheduled Completion Date}!="",{Hide From CAB Schedule}=FALSE())`,
+        fields: ['Name','Work Order Status','Scheduled Completion Date','% Complete','Work Order Number','Due Date'],
+        sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }],
+        maxRecords: 100
+      });
+
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      let behind = [], atRisk = [], onTrack = [];
+
+      records.forEach(r => {
+        const f = r.fields;
+        const scheduled = f['Scheduled Completion Date'];
+        const pct = (f['% Complete'] || 0) * 100;
+        if (!scheduled) return;
+
+        const schedDate = new Date(scheduled);
+        schedDate.setHours(0,0,0,0);
+        const daysLeft = Math.round((schedDate - today) / 86400000);
+
+        const isAtRisk = (daysLeft === 0 && pct < 100)
+          || (daysLeft >= 1 && daysLeft <= 7  && pct < 75)
+          || (daysLeft >= 8 && daysLeft <= 14 && pct < 50);
+
+        if (daysLeft < 0) {
+          behind.push({ ...f, daysLeft });
+        } else if (isAtRisk) {
+          atRisk.push({ ...f, daysLeft });
+        } else {
+          onTrack.push({ ...f, daysLeft });
+        }
+      });
+
+      // Store for click filtering
+      window._scheduleData = { behind, atRisk, onTrack };
+      window._activeFilter = 'behind';
+
+      const renderWOs = (list, accentColor) => {
+        if (list.length === 0) return `<div class="dept-empty">None in this category</div>`;
+        return list.map(f => `
+          <div class="wo-row" style="--row-accent:${accentColor}">
+            <div class="wo-name">${f['Name'] || f['Work Order Number'] || '–'}</div>
+            <div class="wo-pct">${Math.round((f['% Complete'] || 0) * 100)}%</div>
+            <div class="wo-date ${f.daysLeft < 0 ? 'overdue' : ''}">
+              ${f.daysLeft < 0 ? `${Math.abs(f.daysLeft)}d late` : `Due ${fmtDate(f['Scheduled Completion Date'])}`}
+            </div>
+          </div>`).join('');
+      };
+
+      window.filterSchedule = (type) => {
+        window._activeFilter = window._activeFilter === type ? null : type;
+        document.querySelectorAll('.health-card').forEach(c => c.classList.remove('active-filter'));
+        const woList = document.getElementById('woFilteredList');
+        if (!window._activeFilter) { woList.innerHTML = ''; return; }
+        const cssClass = type === 'onTrack' ? 'on-track' : type === 'atRisk' ? 'at-risk' : type;
+        document.querySelector(`.health-card.${cssClass}`)?.classList.add('active-filter');
+        const { list, color } = type === 'behind'
+          ? { list: window._scheduleData.behind,  color: 'var(--red)'    }
+          : type === 'atRisk'
+          ? { list: window._scheduleData.atRisk,  color: 'var(--orange)' }
+          : { list: window._scheduleData.onTrack, color: 'var(--green)'  };
+        woList.innerHTML = `<div class="wo-list">${renderWOs(list, color)}</div>`;
+      };
+
+      container.innerHTML = `
+        <div class="health-summary">
+          <div class="health-card behind" onclick="filterSchedule('behind')">
+            <div class="h-count">${behind.length}</div>
+            <div class="h-label">Behind</div>
+          </div>
+          <div class="health-card at-risk" onclick="filterSchedule('atRisk')">
+            <div class="h-count">${atRisk.length}</div>
+            <div class="h-label">At Risk</div>
+          </div>
+          <div class="health-card on-track" onclick="filterSchedule('onTrack')">
+            <div class="h-count">${onTrack.length}</div>
+            <div class="h-label">On Track</div>
+          </div>
+        </div>
+        <div id="woFilteredList"></div>
+      `;
+
+      // Default: show behind on load
+      window.filterSchedule('behind');
+
+    } catch (e) {
+      container.innerHTML = `<div class="error-msg">Schedule health failed to load: ${e.message}</div>`;
+    }
+  }
+
+  // ── INSTALL SIDEBAR ─────────────────────────────────────────
+  async function loadInstall() {
+    const el  = document.getElementById('installSidebar');
+    const rev = document.getElementById('sidebarRev');
+    try {
+      const now = new Date();
+      const monthStr   = String(now.getMonth() + 1).padStart(2,'0');
+      const monthStart = `${now.getFullYear()}-${monthStr}-01`;
+      const monthEnd   = `${now.getFullYear()}-${monthStr}-31`;
+      const monthName  = now.toLocaleDateString('en-US', { month: 'long' });
+
+      const [records, schedRecs] = await Promise.all([
+        fetchAll(PROD_BASE, T.workOrders, {
+          filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")))`,
+          fields: ['Name','Work Order Status','% Complete','Scheduled Completion Date','Due Date'],
+          sort: [{ field: 'Scheduled Completion Date', direction: 'asc' }]
+        }),
+        fetchAll(PROD_BASE, T.workOrders, {
+          filterByFormula: `AND(OR({Work Order Status}="Not Started",{Work Order Status}="In Progress",{Work Order Status}="Verification Required"),FIND("Install",ARRAYJOIN({Category},",")),{Scheduled Completion Date}>="${monthStart}",{Scheduled Completion Date}<="${monthEnd}")`,
+          fields: ['Pre-Tax Revenue']
+        })
+      ]);
+
+      const schedTotal = schedRecs.reduce((sum, r) => sum + (r.fields['Pre-Tax Revenue'] || 0), 0);
+      const schedPct   = Math.min(Math.round((schedTotal / MONTHLY_GOAL) * 100), 100);
+      rev.innerHTML = `
+        <div class="sidebar-rev-card">
+          <div class="sidebar-rev-label">Projected Install Revenue · ${monthName}</div>
+          <div class="sidebar-rev-value">${fmt$(schedTotal)}</div>
+          <div class="sidebar-rev-sub">${schedRecs.length} WOs due this month</div>
+          <div class="sidebar-rev-bar-wrap">
+            <div class="sidebar-rev-bar" style="width:${schedPct}%"></div>
+          </div>
+        </div>`;
+
+      const inProgress = records.filter(r => r.fields['Work Order Status'] === 'In Progress' || (r.fields['% Complete'] || 0) > 0);
+      const upcoming   = records.filter(r => r.fields['Work Order Status'] === 'Not Started' && (r.fields['% Complete'] || 0) === 0);
+
+      const renderCard = (r, type) => {
+        const f = r.fields;
+        const nameParts = (f['Name'] || '').split('|');
+        const jobName = nameParts[0].trim();
+        const desc = nameParts[2] ? nameParts[2].trim() : '';
+        const pct = Math.round((f['% Complete'] || 0) * 100);
+        const date = f['Scheduled Completion Date'] || f['Due Date'];
+        const days = daysFromNow(date);
+        const dateClass = days === null ? '' : days < 0 ? 'overdue' : days <= 7 ? 'soon' : '';
+        const dateText = date ? (days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Due today' : `Due ${fmtDate(date)}`) : '';
+
+        return `
+          <div class="install-card ${type}">
+            <div class="install-job">${jobName}</div>
+            <div class="install-desc">${desc}</div>
+            ${type === 'in-progress' ? `
+              <div class="install-pct-row">
+                <span class="install-pct-label">${pct}%</span>
+                <div class="install-bar-wrap"><div class="install-bar" style="width:${pct}%"></div></div>
+              </div>` : ''}
+            ${dateText ? `<div class="install-date ${dateClass}">${dateText}</div>` : ''}
+          </div>`;
+      };
+
+      el.innerHTML = `
+        ${inProgress.length > 0 ? `
+          <div class="install-section-label">In Progress</div>
+          ${inProgress.map(r => renderCard(r, 'in-progress')).join('')}` : ''}
+        ${upcoming.length > 0 ? `
+          <div class="install-section-label">Upcoming</div>
+          ${upcoming.map(r => renderCard(r, 'upcoming')).join('')}` : ''}
+        ${inProgress.length === 0 && upcoming.length === 0 ? '<div class="dept-empty">No active installs</div>' : ''}
+      `;
+    } catch(e) {
+      el.innerHTML  = `<div class="error-msg">Install failed: ${e.message}</div>`;
+      rev.innerHTML = '';
+    }
+  }
+
+  // ── TOGGLE DEPT ──────────────────────────────────────────────
+  function toggleDept(header) {
+    header.closest('.dept-card').classList.toggle('open');
+  }
+
+  // ── TOGGLE UPCOMING ──────────────────────────────────────────
+  function toggleUpcoming(deptId) {
+    const tog = document.getElementById('tog-' + deptId);
+    const body = document.getElementById('upb-' + deptId);
+    tog.classList.toggle('open');
+    body.classList.toggle('open');
+  }
+
+  // ── LOAD ALL ─────────────────────────────────────────────────
+  // ── WEEKLY EARNED REVENUE BY DEPT ────────────────────────────
+  async function loadWeeklyEarnedByDept() {
+    const container = document.getElementById('weeklyEarnedByDept');
+    try {
+      // Build Mon–Fri of the current week
+      const now = new Date();
+      const day = now.getDay(); // 0=Sun,1=Mon...
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+      monday.setHours(0,0,0,0);
+
+      const days = [];
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days.push(d.toISOString().slice(0,10));
+      }
+      const weekStart = days[0];
+      const weekEnd   = days[4];
+      const todayStr  = now.toISOString().slice(0,10);
+
+      const records = await fetchAll(PROD_BASE, T.woSteps, {
+        filterByFormula: `AND({Step Status(fx)}!="Complete",{Finish (calc)}>="${weekStart}",{Finish (calc)}<="${weekEnd}")`,
+        fields: ['Departments','Step Unearned Revenue','Finish (calc)']
+      });
+
+      // Build [dept][date] totals
+      const totals = {};
+      SHOP_DEPTS.forEach(d => { totals[d] = {}; days.forEach(date => { totals[d][date] = 0; }); });
+
+      records.forEach(r => {
+        const f = r.fields;
+        const rev  = f['Step Unearned Revenue'] || 0;
+        const date = (f['Finish (calc)'] || '').slice(0,10);
+        const deptIds = Array.isArray(f['Departments']) ? f['Departments'] : [];
+        deptIds.forEach(dId => {
+          const dName = DEPT_ID_MAP[dId];
+          if (dName && totals[dName] && date in totals[dName]) {
+            totals[dName][date] += rev;
+          }
+        });
+      });
+
+      // Only show depts that have any value this week
+      const activeDepts = SHOP_DEPTS.filter(d => days.some(date => totals[d][date] > 0));
+
+      if (!activeDepts.length) {
+        container.innerHTML = '<div style="color:var(--muted);font-size:0.8rem;padding:12px 0">No scheduled steps this week.</div>';
+        return;
+      }
+
+      const dayLabels = days.map(d => {
+        const dt = new Date(d + 'T12:00:00');
+        return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      });
+
+      // Header row
+      let html = `<table class="weekly-earned-table"><thead><tr>
+        <th>Dept</th>
+        ${days.map((d,i) => `<th class="${d===todayStr?'wet-today':''}">${dayLabels[i]}</th>`).join('')}
+        <th>Week Total</th>
+      </tr></thead><tbody>`;
+
+      // Dept rows
+      activeDepts.forEach(dept => {
+        const color = DEPT_COLORS[dept] || '#6b7280';
+        const weekTotal = days.reduce((s, d) => s + totals[dept][d], 0);
+        html += `<tr>
+          <td style="border-left:3px solid ${color};padding-left:8px">${dept}</td>
+          ${days.map(d => {
+            const amt = totals[dept][d];
+            const isToday = d === todayStr;
+            return `<td class="${isToday?'wet-today':''} ${amt>0?'wet-amt':'wet-zero'}">${amt > 0 ? fmt$(Math.round(amt)) : '–'}</td>`;
+          }).join('')}
+          <td class="week-total">${weekTotal > 0 ? fmt$(Math.round(weekTotal)) : '–'}</td>
+        </tr>`;
+      });
+
+      // Column totals row
+      html += `<tr class="dept-total-row">
+        <td>All Depts</td>
+        ${days.map(d => {
+          const daySum = activeDepts.reduce((s, dept) => s + totals[dept][d], 0);
+          const isToday = d === todayStr;
+          return `<td class="${isToday?'wet-today':''}">${daySum > 0 ? fmt$(Math.round(daySum)) : '–'}</td>`;
+        }).join('')}
+        <td>${fmt$(Math.round(activeDepts.reduce((s, dept) => s + days.reduce((ss, d) => ss + totals[dept][d], 0), 0)))}</td>
+      </tr>`;
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    } catch(e) {
+      container.innerHTML = `<div class="error-msg">Weekly earned failed: ${e.message}</div>`;
+    }
+  }
+
+  async function loadAll() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    btn.textContent = '↻ Loading…';
+
+    await Promise.all([
+      loadRevenue(),
+      loadDeptRevenue(),
+      loadWeeklyEarnedByDept(),
+      loadShopFloor(),
+      loadMaterialRisk(),
+      loadMaterials(),
+      loadScheduleHealth(),
+      loadInstall(),
+    ]);
+
+    const now = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+
+    btn.classList.remove('spinning');
+    btn.textContent = '↻ Refresh';
+  }
+
+  // Auto-refresh every 5 minutes
+  loadAll();
+  setInterval(loadAll, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>
