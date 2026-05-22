@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>EFSJ WO Build-Out Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #f5f5f3;
+    --panel: #ffffff;
+    --border: #d8d3cc;
+    --ink: #1a1a1a;
+    --muted: #6b6b6b;
+    --accent: #2a5d3d;
+    --accent-hover: #1f4a30;
+    --warn: #b8860b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    margin: 0;
+    padding: 24px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+  }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .panel h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 16px 0;
+    font-weight: 600;
+  }
+  .row { margin-bottom: 14px; }
+  .row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    color: var(--ink);
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(42, 93, 61, 0.15);
+  }
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .check input { width: auto; }
+  .check label {
+    margin: 0;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    color: var(--ink);
+    font-size: 14px;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary {
+    background: white;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: #f0ede8; }
+  .summary {
+    background: #f0ede8;
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .summary strong { color: var(--accent); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #f0ede8;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot td { font-weight: 700; background: #f0ede8; }
+  .empty {
+    color: var(--muted);
+    font-style: italic;
+    padding: 30px;
+    text-align: center;
+  }
+  .pill {
+    display: inline-block;
+    background: rgba(42, 93, 61, 0.1);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .copied {
+    background: var(--warn) !important;
+    color: white !important;
+  }
+  .foot {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>EFSJ WO Build-Out Generator <span class="pill">v2 Hybrid</span></h1>
+  <div class="sub">Generate a complete WO step list from a room scope. Calibrated against Martha C12389C21.</div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Room Scope</h2>
+
+      <div class="row">
+        <label>WO Number</label>
+        <input id="wo_number" value="SAMPLE-NEW-ROOM" />
+      </div>
+      <div class="row">
+        <label>Room Name</label>
+        <input id="room_name" value="Sample Custom Room" />
+      </div>
+      <div class="row two">
+        <div>
+          <label>Type</label>
+          <select id="type">
+            <option>Custom Inset</option>
+            <option>Custom Overlay</option>
+          </select>
+        </div>
+        <div>
+          <label>Finish</label>
+          <select id="finish">
+            <option value="PG">PG (Paint)</option>
+            <option value="SG">SG (Stain)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <label>Species</label>
+        <input id="species" value="white oak" />
+      </div>
+
+      <div class="row two">
+        <div>
+          <label># Cabinets</label>
+          <input type="number" id="cabinet_count" value="6" min="0" />
+        </div>
+        <div>
+          <label># Face Frame Openings</label>
+          <input type="number" id="face_frame_openings" value="7" min="0" />
+        </div>
+      </div>
+      <div class="row two">
+        <div>
+          <label># Doors + Drawer Fronts</label>
+          <input type="number" id="door_count" value="12" min="0" />
+        </div>
+        <div>
+          <label># Hinges</label>
+          <input type="number" id="hinge_count" value="12" min="0" />
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <h2 style="font-size:12px; margin-bottom:8px;">Special items</h2>
+        <div class="check">
+          <input type="checkbox" id="has_special_items" />
+          <label for="has_special_items">Has special items</label>
+        </div>
+        <div class="row">
+          <label># of Special Items</label>
+          <input type="number" id="special_items_count" value="0" min="0" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" onclick="generate()">Generate</button>
+        <button class="btn-secondary" onclick="downloadCSV()">Download CSV</button>
+        <button class="btn-secondary" id="copyBtn" onclick="copyCSV()">Copy CSV</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Generated Step List</h2>
+      <div id="output">
+        <div class="empty">Click <strong>Generate</strong> to build the step list.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">EFSJ WO Build-Out Generator · v2 Hybrid · Calibrated against C12389C21 (Martha Retreat Laundry)</div>
+</div>
+
+<script>
+// ---------- Rate library (minutes per assembly) ----------
+const RATES = {
+  "Engineering Complete": 0,
+  "CNC (per cabinet)": 45,
+  "Build CAB Components": 90,
+  "Build Doors/Drawer Fronts": 90,
+  "Prep Face Frames (per opening)": 18,
+  "Special Items to Build": 120,
+  "Finish Prep & Sanding Raw": 25,
+  "Stain (per opening) Coat 1": 20,
+  "Prime (per opening) Coat 1": 20,
+  "Finish Prep & Sanding Pre 2nd Primer Coat": 25,
+  "Prime (per opening) Coat 2": 15,
+  "Finish Prep & Sanding Pre 1st Paint Coat": 20,
+  "Paint (per opening) Coat 1": 15,
+  "Finish Prep & Sanding Pre 2nd Paint Coat": 15,
+  "Paint (per opening) Coat 2": 15,
+  "Door Hardware (per hinge)": 18,
+  "Package for Delivery": 40,
+};
+
+// ---------- Playbook (hybrid model) ----------
+function buildPlaybook(scope) {
+  const cabs = scope.cabinet_count;
+  const doors = scope.door_count;
+  const openings = scope.face_frame_openings;
+  const hinges = scope.hinge_count;
+  const specials = scope.has_special_items ? scope.special_items_count : 0;
+  const packages = Math.max(1, Math.ceil(cabs / 7));
+  const isSG = scope.finish === "SG";
+
+  const steps = [];
+  steps.push(["Engineering Complete", 1]);
+
+  // Build/Prep (per-category)
+  steps.push(["CNC (per cabinet)", cabs]);
+  steps.push(["Build CAB Components", cabs]);
+  if (doors > 0) steps.push(["Build Doors/Drawer Fronts", doors]);
+  if (openings > 0) steps.push(["Prep Face Frames (per opening)", openings]);
+  if (specials > 0) steps.push(["Special Items to Build", specials]);
+
+  // Combined raw prep
+  steps.push(["Finish Prep & Sanding Raw", openings + specials]);
+
+  // Stain (SG only)
+  if (isSG) steps.push(["Stain (per opening) Coat 1", openings]);
+
+  // Paint cycle (per-opening unified)
+  steps.push(["Prime (per opening) Coat 1", openings]);
+  steps.push(["Finish Prep & Sanding Pre 2nd Primer Coat", openings]);
+  steps.push(["Prime (per opening) Coat 2", openings]);
+  steps.push(["Finish Prep & Sanding Pre 1st Paint Coat", openings]);
+  steps.push(["Paint (per opening) Coat 1", openings]);
+  steps.push(["Finish Prep & Sanding Pre 2nd Paint Coat", openings]);
+  steps.push(["Paint (per opening) Coat 2", openings]);
+
+  // Hardware & Package
+  if (hinges > 0) steps.push(["Door Hardware (per hinge)", hinges]);
+  steps.push(["Package for Delivery", packages]);
+
+  return steps;
+}
+
+function readScope() {
+  return {
+    wo_number: document.getElementById("wo_number").value.trim(),
+    room_name: document.getElementById("room_name").value.trim(),
+    type: document.getElementById("type").value,
+    finish: document.getElementById("finish").value,
+    species: document.getElementById("species").value,
+    cabinet_count: +document.getElementById("cabinet_count").value || 0,
+    door_count: +document.getElementById("door_count").value || 0,
+    face_frame_openings: +document.getElementById("face_frame_openings").value || 0,
+    hinge_count: +document.getElementById("hinge_count").value || 0,
+    has_special_items: document.getElementById("has_special_items").checked,
+    special_items_count: +document.getElementById("special_items_count").value || 0,
+  };
+}
+
+function generateSteps(scope) {
+  const playbook = buildPlaybook(scope);
+  return playbook.map(([name, nAsm], i) => {
+    const tpa = RATES[name] || 0;
+    const dur = nAsm > 0 ? (tpa * nAsm) / 55 : 0;
+    return {
+      stepNumber: i + 1,
+      stepDescription: name,
+      tpa: tpa,
+      nAsm: nAsm,
+      duration: Math.round(dur * 100) / 100,
+    };
+  });
+}
+
+function render() {
+  const scope = readScope();
+  const steps = generateSteps(scope);
+  const totalHrs = steps.reduce((s, r) => s + r.duration, 0);
+  const out = document.getElementById("output");
+
+  let html = `<div class="summary">`;
+  html += `<strong>${scope.wo_number}</strong> · ${scope.room_name} · ${scope.type} · ${scope.finish} · `;
+  html += `${scope.cabinet_count} cabs · ${scope.door_count} doors · ${scope.face_frame_openings} openings`;
+  if (scope.has_special_items) html += ` · ${scope.special_items_count} specials`;
+  html += `<br><strong>${steps.length} steps · ${totalHrs.toFixed(2)} total hours</strong>`;
+  html += `</div>`;
+
+  html += `<table><thead><tr>
+    <th class="num">#</th><th>Step Description</th>
+    <th class="num">TPA (min)</th><th class="num"># Asm</th><th class="num">Hours</th>
+  </tr></thead><tbody>`;
+  for (const s of steps) {
+    html += `<tr>
+      <td class="num">${s.stepNumber}</td>
+      <td>${s.stepDescription}</td>
+      <td class="num">${s.tpa}</td>
+      <td class="num">${s.nAsm}</td>
+      <td class="num">${s.duration.toFixed(2)}</td>
+    </tr>`;
+  }
+  html += `</tbody><tfoot><tr>
+    <td colspan="4">TOTAL</td><td class="num">${totalHrs.toFixed(2)}</td>
+  </tr></tfoot></table>`;
+
+  out.innerHTML = html;
+  return { scope, steps, totalHrs };
+}
+
+function generate() { render(); }
+
+function buildCSV() {
+  const scope = readScope();
+  const steps = generateSteps(scope);
+  const rows = [["Step Number", "Step Description", "Time/Assembly (mins)", "# of Assemblies", "Duration (hours)"]];
+  for (const s of steps) {
+    rows.push([s.stepNumber, s.stepDescription, s.tpa, s.nAsm, s.duration]);
+  }
+  return rows.map(r => r.map(c => {
+    const v = String(c);
+    return v.includes(",") || v.includes("\"") ? `"${v.replace(/"/g, '""')}"` : v;
+  }).join(",")).join("\r\n");
+}
+
+function downloadCSV() {
+  render();
+  const scope = readScope();
+  const csv = buildCSV();
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(scope.wo_number || 'wo').replace(/[^A-Za-z0-9._-]/g, '_')}-buildout.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function copyCSV() {
+  render();
+  const csv = buildCSV();
+  try {
+    await navigator.clipboard.writeText(csv);
+    const btn = document.getElementById("copyBtn");
+    const orig = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove("copied");
+    }, 1500);
+  } catch (e) {
+    alert("Copy failed — try Download CSV instead.");
+  }
+}
+
+// Auto-generate on load with defaults
+window.addEventListener("DOMContentLoaded", () => render());
+</script>
+</body>
+</html>
