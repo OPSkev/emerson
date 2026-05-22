@@ -177,12 +177,52 @@
     margin-top: 20px;
     text-align: center;
   }
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 18px;
+    text-align: center;
+    background: var(--panel);
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .drop-zone.over {
+    border-color: var(--accent);
+    background: #f0ede8;
+  }
+  .drop-zone p { margin: 4px 0; font-size: 13px; color: var(--muted); }
+  .drop-zone strong { color: var(--ink); font-size: 14px; }
+  .drop-zone input { display: none; }
+  .parse-log {
+    background: #f0ede8;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    font-family: "SF Mono", Menlo, monospace;
+    color: var(--ink);
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .parse-log .ok { color: var(--accent); }
+  .parse-log .warn { color: var(--warn); }
+  .parse-log .err { color: #b8261c; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>EFSJ WO Build-Out Generator <span class="pill">v2 Hybrid</span></h1>
   <div class="sub">Generate a complete WO step list from a room scope. Calibrated against Martha C12389C21.</div>
+
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">
+    <strong>Drop a Production Drawings PDF here to auto-fill the form</strong>
+    <p>Or click to browse · Works best with EFSJ/Cabinet Vision drawings (Mike Shirley / Gabe Mitchell format)</p>
+    <p style="font-size:11px;">Header fields fill at 100%; cabinet/drawer counts are best-effort — review before generating</p>
+    <input type="file" id="pdfInput" accept=".pdf" onchange="handleFile(this.files[0])" />
+    <div class="parse-log" id="parseLog" style="display:none;"></div>
+  </div>
 
   <div class="grid">
     <div class="panel">
@@ -268,7 +308,174 @@
   <div class="foot">EFSJ WO Build-Out Generator · v2 Hybrid · Calibrated against C12389C21 (Martha Retreat Laundry)</div>
 </div>
 
-<script>
+<script type="module">
+// ---------- pdf.js loader ----------
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs";
+
+// Drop zone behavior
+const dropZone = document.getElementById("dropZone");
+["dragenter","dragover"].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); e.stopPropagation();
+  dropZone.classList.add("over");
+}));
+["dragleave","drop"].forEach(ev => dropZone.addEventListener(ev, e => {
+  e.preventDefault(); e.stopPropagation();
+  dropZone.classList.remove("over");
+}));
+dropZone.addEventListener("drop", e => {
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+window.handleFile = async function(file) {
+  if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
+    log("Please drop a PDF file.", "err"); return;
+  }
+  clearLog();
+  log(`Reading "${file.name}" ...`);
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    log(`PDF loaded — ${pdf.numPages} pages`, "ok");
+    let allText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const lines = content.items.map(it => it.str.trim()).filter(Boolean);
+      allText += lines.join("\n") + "\n";
+    }
+    const extracted = parseEFSJPdf(allText);
+    applyExtracted(extracted);
+  } catch (err) {
+    log(`Parse failed: ${err.message}`, "err");
+    console.error(err);
+  }
+};
+
+function log(msg, cls = "") {
+  const el = document.getElementById("parseLog");
+  el.style.display = "block";
+  const span = document.createElement("div");
+  if (cls) span.className = cls;
+  span.textContent = msg;
+  el.appendChild(span);
+}
+function clearLog() {
+  const el = document.getElementById("parseLog");
+  el.style.display = "none";
+  el.innerHTML = "";
+}
+
+function findValue(text, regex) {
+  const m = text.match(regex);
+  return m ? m[1].trim() : null;
+}
+
+function parseEFSJPdf(text) {
+  // Header extraction — high confidence
+  const roomName = findValue(text, /Room Name:\s*\n?\s*([^\n]+)/i);
+  const cabinetLine = findValue(text, /Cabinet Line:\s*\n?\s*([^\n]+)/i);
+  const species = findValue(text, /Species:\s*\n?\s*([^\n]+)/i);
+  const finishStr = findValue(text, /Finish:\s*\n?\s*([^\n]+)/i);
+  const jobNumber = findValue(text, /Job Number:\s*\n?\s*([^\n]+)/i);
+
+  // Type mapping
+  let typeGuess = "Custom Inset";
+  if (cabinetLine && /overlay/i.test(cabinetLine)) typeGuess = "Custom Overlay";
+
+  // Finish detection: SG if finish contains common stain/wash keywords
+  let finishGuess = "PG";
+  if (finishStr) {
+    const sgIndicators = /\b(stain|wash|white wash|wax|oil|dye|natural)\b/i;
+    if (sgIndicators.test(finishStr)) finishGuess = "SG";
+  }
+
+  // Cabinet count: count of items containing "Base", "Tall", "Sink", or "Upper"
+  // (excluding pilasters, panels, frames, trim)
+  const cabinetPatterns = /\b(Drawer Base|Sink Base|Cooktop Base|Base Cabinet|Tall \w+|Wall Cab|Upper \d+ Shelves|Upper Cabinet|Vanity)/gi;
+  const cabinetMatches = text.match(cabinetPatterns) || [];
+
+  // Drawer count: sum N from "N Drawer" patterns
+  const drawerRe = /(\d+)\s*Drawer\b/gi;
+  let drawerSum = 0;
+  let m;
+  while ((m = drawerRe.exec(text)) !== null) {
+    drawerSum += parseInt(m[1], 10);
+  }
+
+  // Face frame openings: count of "Loose Outer Frame" + fallback to cabinet count
+  const looseFrames = (text.match(/Loose Outer Frame/gi) || []).length;
+  const ffOpenings = looseFrames > 0 ? looseFrames : cabinetMatches.length;
+
+  // Specials: pilasters, wall panels, onsite trim, pocket door, custom items
+  const specialPatterns = /\b(pilaster|Wall Panel|Pocket Door|Onsite|Floating Shelf|Floating Shelves|Mantel|Crown\s*Mold|Panel Mould|Leather)/gi;
+  const specials = (text.match(specialPatterns) || []).length;
+
+  // Hinge count: best-effort from hardware section
+  // Pulls/knobs roughly = doors + drawers; rose count ~= door count × 2 hinges
+  // For now leave hinge count manual (default to drawer count × 1)
+  const hingeGuess = null;
+
+  return {
+    jobNumber, roomName, typeGuess, finishGuess, species,
+    cabinetCount: cabinetMatches.length,
+    drawerCount: drawerSum,
+    ffOpenings,
+    specialsCount: specials,
+    hingeGuess,
+    cabinetItemsFound: cabinetMatches.slice(0, 20),
+  };
+}
+
+function applyExtracted(ex) {
+  if (ex.jobNumber && ex.roomName) {
+    document.getElementById("wo_number").value = `${ex.jobNumber}-${(ex.roomName.split("-")[0] || "").trim()}`;
+    log(`Job Number: ${ex.jobNumber}`, "ok");
+  }
+  if (ex.roomName) {
+    document.getElementById("room_name").value = ex.roomName;
+    log(`Room Name: ${ex.roomName}`, "ok");
+  }
+  if (ex.typeGuess) {
+    document.getElementById("type").value = ex.typeGuess;
+    log(`Type: ${ex.typeGuess}`, "ok");
+  }
+  if (ex.finishGuess) {
+    document.getElementById("finish").value = ex.finishGuess;
+    log(`Finish: ${ex.finishGuess}${ex.finishGuess === "SG" ? " (stain/wash detected)" : ""}`, "ok");
+  }
+  if (ex.species) {
+    document.getElementById("species").value = ex.species;
+    log(`Species: ${ex.species}`, "ok");
+  }
+  if (ex.cabinetCount > 0) {
+    document.getElementById("cabinet_count").value = ex.cabinetCount;
+    log(`Cabinets: ${ex.cabinetCount} (matched: ${ex.cabinetItemsFound.slice(0,5).join(", ")}${ex.cabinetItemsFound.length > 5 ? "…" : ""})`, "ok");
+  } else {
+    log("Cabinets: could not parse — enter manually", "warn");
+  }
+  if (ex.drawerCount > 0) {
+    document.getElementById("door_count").value = ex.drawerCount;
+    log(`Doors+Drawer Fronts: ${ex.drawerCount} (drawer count from "N Drawer" patterns)`, "ok");
+  } else {
+    log("Door/Drawer count: could not parse — enter manually", "warn");
+  }
+  if (ex.ffOpenings > 0) {
+    document.getElementById("face_frame_openings").value = ex.ffOpenings;
+    log(`Face Frame Openings: ${ex.ffOpenings}`, "ok");
+  }
+  if (ex.specialsCount > 0) {
+    document.getElementById("has_special_items").checked = true;
+    document.getElementById("special_items_count").value = ex.specialsCount;
+    log(`Special Items: ${ex.specialsCount} (pilasters, wall panels, custom)`, "ok");
+  }
+  log("Done — review fields, then click Generate.", "ok");
+
+  // Auto-render with new values
+  if (window.generate) window.generate();
+}
+
 // ---------- Rate library (minutes per assembly) ----------
 const RATES = {
   "Engineering Complete": 0,
@@ -398,6 +605,8 @@ function render() {
 }
 
 function generate() { render(); }
+window.generate = generate;
+window.render = render;
 
 function buildCSV() {
   const scope = readScope();
@@ -445,8 +654,12 @@ async function copyCSV() {
   }
 }
 
+// Expose onclick handlers globally (module scope otherwise)
+window.downloadCSV = downloadCSV;
+window.copyCSV = copyCSV;
+
 // Auto-generate on load with defaults
-window.addEventListener("DOMContentLoaded", () => render());
+render();
 </script>
 </body>
 </html>
