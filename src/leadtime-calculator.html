@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead-Time Calculator — EFSJ Cabinetry</title>
+<style>
+  :root{
+    --bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;
+    --txt:#e6e9ef;--dim:#9aa3b2;--mono:'SFMono-Regular',Consolas,monospace;
+    --hot:#ff5d5d;--warn:#ffb043;--note:#5da9ff;--ok:#3ecf8e;--acc:#7c8cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:15px/1.45 -apple-system,Segoe UI,Roboto,sans-serif}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 22px 60px}
+  h1{font-size:23px;margin:0;letter-spacing:-.3px}
+  .sub{color:var(--dim);font-size:13px;margin:3px 0 22px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.4px;
+    color:var(--dim);margin:14px 0 6px}
+  label:first-child{margin-top:0}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--txt);border-radius:8px;padding:10px 12px;font-size:15px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    padding:9px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600}
+  .seg button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+  .lvl{display:flex;flex-direction:column;gap:7px}
+  .lvl button{text-align:left;background:var(--panel2);border:1px solid var(--line);
+    color:var(--txt);padding:10px 12px;border-radius:8px;cursor:pointer}
+  .lvl button.on{border-color:var(--acc);background:rgba(124,140,255,.12)}
+  .lvl .wk{color:var(--dim);font-size:12px}
+  .lvl button.on .wk{color:var(--acc)}
+  .verdict{padding:16px 18px;border-radius:11px;margin-bottom:16px;border-left:5px solid}
+  .verdict.ok{background:rgba(62,207,142,.10);border-color:var(--ok)}
+  .verdict.warn{background:rgba(255,176,67,.10);border-color:var(--warn)}
+  .verdict.hot{background:rgba(255,93,93,.11);border-color:var(--hot)}
+  .verdict h2{margin:0 0 4px;font-size:19px}
+  .verdict.ok h2{color:var(--ok)}.verdict.warn h2{color:var(--warn)}.verdict.hot h2{color:var(--hot)}
+  .verdict p{margin:4px 0 0;color:var(--dim);font-size:13.5px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;
+    letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:10px;border-bottom:1px solid var(--line)}
+  td.d{font-family:var(--mono);white-space:nowrap}
+  td.w{text-align:center;color:var(--dim);width:70px}
+  tr.gate td{color:var(--acc);font-weight:600}
+  tr.done td{color:var(--ok);font-weight:600}
+  .fx{color:var(--dim);font-size:11px}
+  .note{color:var(--dim);font-size:12px;margin-top:16px;line-height:1.6}
+  code{background:var(--panel2);padding:1px 6px;border-radius:4px;font-size:12px}
+</style></head>
+<body><div class="wrap">
+  <h1>Lead-Time Calculator</h1>
+  <div class="sub">EFSJ Cabinetry · Bryan's production timeline · <b>node 2</b> of the schedule-flow build</div>
+
+  <div class="grid">
+    <div class="panel">
+      <label>Mode</label>
+      <div class="seg">
+        <button id="mFwd" class="on" onclick="setMode('fwd')">Forward from release</button>
+        <button id="mBack" onclick="setMode('back')">Back-calc from ship</button>
+      </div>
+
+      <label id="dateLabel">Job Released date</label>
+      <input type="date" id="theDate">
+
+      <label>Project level <span class="fx">— set by PM</span></label>
+      <div class="lvl" id="lvl">
+        <button data-l="1" onclick="setLvl(1)"><b>Level 1</b> &nbsp;<span class="wk">~9 wk</span><br>
+          <span class="wk">Standard cabinetry, minimal customization</span></button>
+        <button data-l="2" class="on" onclick="setLvl(2)"><b>Level 2</b> &nbsp;<span class="wk">~14 wk</span><br>
+          <span class="wk">Custom, moderate complexity &amp; coordination</span></button>
+        <button data-l="3" onclick="setLvl(3)"><b>Level 3</b> &nbsp;<span class="wk">~19 wk</span><br>
+          <span class="wk">Highly custom millwork, significant design complexity</span></button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div id="verdict"></div>
+      <table>
+        <thead><tr><th>Milestone</th><th class="w">+wks</th><th>Date</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="note">
+        <b>Job Released</b> = package contracted + deposit received + field-dim drawings approved
+        + hardware finalized + color samples approved.<br>
+        <b>Production Ready</b> gate = CAD done + WO created + all materials on-site (production can't start before this).<br>
+        Best-case estimates — client decision delays and shop capacity extend these. Calendar weeks.
+      </div>
+    </div>
+  </div>
+
+<script>
+// Bryan's math (weeks from Job Released). Fixed steps + per-level variable steps.
+const STEPS = [
+  {name:'Prep for Engineering', fixed:2},
+  {name:'Engineering',          lvl:{1:1,2:2,3:3}},
+  {name:'CAD / Millwork Drawings', fixed:1},
+  {name:'Work Order Created',   fixed:1, gate:'Production Ready builds here'},
+  {name:'Materials Ready',      lvl:{1:2,2:4,3:6}, gate:true},
+  {name:'Production / Finishing', lvl:{1:2,2:4,3:6}},
+];
+const TOTAL = {1:9, 2:14, 3:19};
+let mode='fwd', level=2;
+
+function wks(s){ return s.fixed!=null ? s.fixed : s.lvl[level]; }
+function addWeeks(d,w){ const x=new Date(d); x.setDate(x.getDate()+w*7); return x; }
+function fmt(d){ return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+function today0(){ const t=new Date(); t.setHours(0,0,0,0); return t; }
+
+function setMode(m){ mode=m;
+  document.getElementById('mFwd').classList.toggle('on',m==='fwd');
+  document.getElementById('mBack').classList.toggle('on',m==='back');
+  document.getElementById('dateLabel').textContent = m==='fwd' ? 'Job Released date' : 'Target ship date (Production Complete)';
+  render();
+}
+function setLvl(l){ level=l;
+  document.querySelectorAll('#lvl button').forEach(b=>b.classList.toggle('on', +b.dataset.l===l));
+  render();
+}
+
+function render(){
+  const val=document.getElementById('theDate').value;
+  const rows=document.getElementById('rows'), verdict=document.getElementById('verdict');
+  if(!val){ rows.innerHTML=''; verdict.innerHTML='<div class="verdict note"><p>Pick a date to calculate.</p></div>'; return; }
+  const total=TOTAL[level];
+  // release date: given (fwd) or derived (back)
+  const base=new Date(val+'T00:00:00');
+  const release = mode==='fwd' ? base : addWeeks(base, -total);
+
+  // build milestone rows
+  let cum=0, html='';
+  html += `<tr class="gate"><td>Job Released</td><td class="w">0</td><td class="d">${fmt(release)}</td></tr>`;
+  for(const s of STEPS){
+    cum += wks(s);
+    const d=addWeeks(release,cum);
+    const cls = s.gate ? '' : '';
+    html += `<tr><td>${s.name}${s.gate?' <span class="fx">· production-ready gate</span>':''}</td>`+
+            `<td class="w">${cum}</td><td class="d">${fmt(d)}</td></tr>`;
+  }
+  const ship=addWeeks(release,total);
+  html += `<tr class="done"><td>Production Complete (ship)</td><td class="w">${total}</td><td class="d">${fmt(ship)}</td></tr>`;
+  rows.innerHTML=html;
+
+  // verdict
+  if(mode==='fwd'){
+    verdict.className='';
+    verdict.innerHTML=`<div class="verdict ok"><h2>Ships ${fmt(ship)}</h2>
+      <p>Level ${level} · ${total} weeks from Job Released. Best case, capacity permitting.</p></div>`;
+  } else {
+    const t=today0();
+    const days=Math.round((release-t)/86400000);
+    let cls,h,p;
+    if(days<0){ cls='hot'; h=`Impossible — needed to release ${Math.abs(days)} days ago`;
+      p=`To ship ${fmt(ship)} at Level ${level} (${total} wks), Job Released had to happen by ${fmt(release)}. That date is past. Move the ship date or escalate.`; }
+    else if(days<=14){ cls='warn'; h=`Tight — release by ${fmt(release)} (${days} days)`;
+      p=`Only ${days} days of slack to get to Job Released (contract, deposit, field-dim, color, hardware). Any delay pushes the ship.`; }
+    else { cls='ok'; h=`Achievable — release by ${fmt(release)}`;
+      p=`${days} days of runway to reach Job Released. Level ${level} · ${total} wks to ship.`; }
+    verdict.innerHTML=`<div class="verdict ${cls}"><h2>${h}</h2><p>${p}</p></div>`;
+  }
+}
+
+// default date = today
+document.getElementById('theDate').valueAsDate=new Date();
+document.getElementById('theDate').addEventListener('change',render);
+render();
+</script>
+</div></body></html>
