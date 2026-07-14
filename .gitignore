@@ -1,1 +1,7 @@
 src/showroom.html
+
+# stray scripts / secrets
+test.ps1
+*.env
+src/index.html
+src/cabinetry-opps.html
