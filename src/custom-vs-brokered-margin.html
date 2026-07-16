@@ -83,6 +83,17 @@
   .tk h3{font-size:13.5px;margin:0 0 5px;}
   .tk p{font-size:12.5px;color:var(--muted);margin:0;}
 
+  .yt{width:100%;border-collapse:collapse;margin:8px 0 22px;font-size:13.5px;}
+  .yt th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--line);}
+  .yt th:first-child{text-align:left;}
+  .yt td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;
+    font-variant-numeric:tabular-nums;}
+  .yt td:first-child{text-align:left;font-weight:600;}
+  .yt tr.target td{background:rgba(224,83,61,.07);}
+  .yt tr.target td:first-child{color:var(--erode);}
+  .yt .pos{color:var(--good);font-weight:600;}
+  .yt .big{color:var(--erode);font-weight:700;}
   .foot{margin-top:26px;font-size:12px;color:var(--muted);line-height:1.65;
     border-top:1px solid var(--line);padding-top:14px;}
   .foot b{color:var(--ink);}
@@ -179,12 +190,23 @@
     </div>
   </div>
 
-  <h2>The 3-year target — and what it's worth at these margins</h2>
+  <h2>How it fits — last year, this year, next year, and the target</h2>
   <div class="panel">
-    <p style="margin:0 0 16px;font-size:13.5px;color:var(--muted);">
+    <p style="margin:0 0 6px;font-size:13.5px;color:var(--muted);">
       Buddy's 3-year target is <b style="color:var(--ink)">$4.725M</b> (set by the bottleneck report).
-      That's nearly <b style="color:var(--ink)">double</b> the 2027 run-rate. Revenue trajectory we had for Buddy:
+      Here's the cabinet division year over year in real numbers — with gross profit at today's
+      <b style="color:var(--ink)">~71% custom / 29% brokered</b> mix (18.1% blended, on the full-cost margins above):
     </p>
+    <table class="yt">
+      <thead><tr><th>Year</th><th>Cabinet revenue</th><th>YoY growth</th><th>Gross profit*</th><th>% of target</th></tr></thead>
+      <tbody>
+        <tr><td>2025 &nbsp;actual</td><td>$1.68M</td><td>—</td><td>$304K</td><td>36%</td></tr>
+        <tr><td>2026 &nbsp;projected</td><td>$2.26M</td><td class="pos">+35%</td><td>$409K</td><td>48%</td></tr>
+        <tr><td>2027 &nbsp;projected</td><td>$2.51M</td><td class="pos">+11%</td><td>$454K</td><td>53%</td></tr>
+        <tr class="target"><td>2028 &nbsp;target</td><td>$4.725M</td><td class="big">+88%</td><td>$856K</td><td>100%</td></tr>
+      </tbody>
+    </table>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted);">Same trajectory, scaled against the $4.725M target:</p>
 
     <!-- trajectory: scale to 4.725M = 100% -->
     <div class="row">
@@ -206,7 +228,8 @@
       </div>
     </div>
     <p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);">
-      Getting from ~$2.5M to $4.725M is a <b style="color:var(--ink)">+88% jump</b> in two years. The real question isn't just the number — it's <b style="color:var(--ink)">$4.725M of&nbsp;what</b>?
+      <b style="color:var(--ink)">Where it fits and where it doesn't:</b> revenue has grown steadily — <b style="color:var(--ink)">+35%</b> then <b style="color:var(--ink)">+11%</b>. The step that breaks the trend is <b style="color:var(--ink)">2027 → 2028: +88%</b>, nearly doubling in two years. That jump is the plant-capacity question, not a sales-as-usual number.
+      <br><span style="font-size:11px;">*Gross profit held at today's ~71/29 mix (18.1% blended). At the target, the mix itself becomes the swing — next.</span>
     </p>
   </div>
 
