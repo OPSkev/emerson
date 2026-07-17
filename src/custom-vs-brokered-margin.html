@@ -3,285 +3,362 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cabinet Division — Custom vs Brokered Margin</title>
+<title>Cabinet Division — Margin, Mix &amp; the 3-Year Outlook</title>
 <style>
   :root{
-    --bg:#f6f7f9; --card:#ffffff; --ink:#141a22; --muted:#5c6773; --line:#e4e8 ec;
-    --line:#e4e8ec;
-    --keep:#2f6fed;      /* actual margin kept */
-    --erode:#e0533d;     /* the gap that leaks out */
-    --track:#eef1f5;     /* priced-for track */
+    --bg:#f5f6f8; --card:#ffffff; --ink:#131a24; --ink2:#3b4756; --muted:#697585;
+    --line:#e5e9ee; --track:#eef1f5;
+    --custom:#2f6fed;   /* custom / margin kept */
+    --brok:#d98a2b;     /* brokered */
+    --erode:#e0533d;    /* erosion / target */
     --good:#1f9d6b;
-    --accent:#141a22;
+    --shadow:0 1px 2px rgba(20,26,36,.05),0 8px 24px rgba(20,26,36,.04);
   }
   @media (prefers-color-scheme: dark){
-    :root{ --bg:#0f1216; --card:#171b21; --ink:#e8ebf0; --muted:#98a2b0;
-      --line:#282e37; --track:#20262f; --keep:#5b9bff; --erode:#ff6f57; }
+    :root{ --bg:#0e1116; --card:#161b22; --ink:#e9edf2; --ink2:#c2cad4; --muted:#8b97a6;
+      --line:#252c36; --track:#1e242d; --custom:#5b9bff; --brok:#e8a54e; --erode:#ff6f57;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.25);}
   }
-  :root[data-theme="dark"]{ --bg:#0f1216; --card:#171b21; --ink:#e8ebf0; --muted:#98a2b0;
-    --line:#282e37; --track:#20262f; --keep:#5b9bff; --erode:#ff6f57; }
-  :root[data-theme="light"]{ --bg:#f6f7f9; --card:#ffffff; --ink:#141a22; --muted:#5c6773;
-    --line:#e4e8ec; --track:#eef1f5; --keep:#2f6fed; --erode:#e0533d; }
+  :root[data-theme="dark"]{ --bg:#0e1116; --card:#161b22; --ink:#e9edf2; --ink2:#c2cad4; --muted:#8b97a6;
+    --line:#252c36; --track:#1e242d; --custom:#5b9bff; --brok:#e8a54e; --erode:#ff6f57;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.25);}
+  :root[data-theme="light"]{ --bg:#f5f6f8; --card:#ffffff; --ink:#131a24; --ink2:#3b4756; --muted:#697585;
+    --line:#e5e9ee; --track:#eef1f5; --custom:#2f6fed; --brok:#d98a2b; --erode:#e0533d;
+    --shadow:0 1px 2px rgba(20,26,36,.05),0 8px 24px rgba(20,26,36,.04);}
 
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased;}
-  .wrap{max-width:960px;margin:0 auto;padding:34px 26px 54px;}
-  header{margin-bottom:8px;}
-  h1{font-size:24px;letter-spacing:-.3px;margin:0 0 4px;}
-  .sub{color:var(--muted);font-size:13.5px;}
-  .src{color:var(--muted);font-size:12px;margin-top:6px;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px 64px;}
+  .num{font-variant-numeric:tabular-nums;}
 
-  .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0 8px;}
-  @media(max-width:640px){.cards{grid-template-columns:1fr}}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:18px 20px;}
-  .card .tag{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
-  .card .code{font-family:Consolas,monospace;font-size:11px;color:var(--muted);float:right;}
-  .card .big{font-size:40px;font-weight:700;line-height:1.05;margin:8px 0 2px;}
-  .card .gmlbl{font-size:12px;color:var(--muted);}
-  .card .mult{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);
-    font-size:12.5px;color:var(--muted);}
-  .card .mult b{color:var(--ink);font-weight:600;}
+  /* header */
+  header{padding:38px 0 8px;border-bottom:1px solid var(--line);margin-bottom:28px;}
+  .kicker{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--custom);font-weight:700;}
+  h1{font-size:27px;letter-spacing:-.4px;margin:6px 0 6px;}
+  .lede{color:var(--ink2);font-size:15px;max-width:70ch;margin:0;}
+  .src{color:var(--muted);font-size:12px;margin-top:12px;}
 
-  h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);
-    margin:30px 0 6px;}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;
-    padding:20px 22px;}
+  /* section */
+  section{margin-top:38px;}
+  .slabel{font-size:11.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);
+    font-weight:700;margin:0 0 14px;display:flex;align-items:center;gap:10px;}
+  .slabel::after{content:"";flex:1;height:1px;background:var(--line);}
 
-  .legend{display:flex;gap:18px;font-size:12px;color:var(--muted);margin:2px 0 18px;}
-  .legend span{display:inline-flex;align-items:center;gap:6px;}
-  .sw{width:11px;height:11px;border-radius:3px;display:inline-block;}
-  .sw.keep{background:var(--keep);}
-  .sw.erode{background:var(--erode);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media(max-width:720px){.grid2,.grid4,.grid3{grid-template-columns:1fr 1fr}}
+  @media(max-width:460px){.grid2,.grid4,.grid3{grid-template-columns:1fr}}
 
-  .row{margin:16px 0;}
-  .row .rlbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
-  .row .rname{font-weight:600;font-size:14px;}
-  .row .rnote{font-size:12px;color:var(--muted);}
-  .bar{position:relative;height:30px;background:var(--track);border:1px solid var(--line);
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;box-shadow:var(--shadow);}
+
+  /* hero stat strip */
+  .stat .yr{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+  .stat .v{font-size:28px;font-weight:750;line-height:1.05;margin:6px 0 2px;}
+  .stat .d{font-size:12px;color:var(--muted);}
+  .stat.tgt{border-color:var(--erode);}
+  .stat.tgt .v{color:var(--erode);}
+  .stat .up{color:var(--good);font-weight:600;}
+
+  /* product margin cards */
+  .pcard .code{float:right;font:600 11px Consolas,monospace;color:var(--muted);}
+  .pcard .tag{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+  .pcard .big{font-size:40px;font-weight:750;line-height:1;margin:8px 0 2px;}
+  .pcard.c .big{color:var(--custom);} .pcard.b .big{color:var(--brok);}
+  .pcard .gl{font-size:12px;color:var(--muted);}
+  .pcard .mult{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--ink2);} .pcard .mult b{color:var(--ink);}
+
+  /* erosion bars */
+  .row{margin:15px 0;}
+  .rlbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .rname{font-weight:650;font-size:13.5px;} .rnote{font-size:12px;color:var(--muted);}
+  .bar{position:relative;height:26px;background:var(--track);border:1px solid var(--line);
     border-radius:7px;overflow:hidden;}
-  .fill{position:absolute;left:0;top:0;bottom:0;background:var(--keep);
-    border-radius:6px 0 0 6px;}
-  .gap{position:absolute;top:0;bottom:0;
+  .fill{position:absolute;left:0;top:0;bottom:0;border-radius:6px 0 0 6px;}
+  .gap{position:absolute;top:0;bottom:0;border-left:2px solid var(--erode);
     background:repeating-linear-gradient(135deg,transparent,transparent 5px,
-      rgba(224,83,61,.16) 5px,rgba(224,83,61,.16) 10px);
-    border-left:2px solid var(--erode);}
-  .tick{position:absolute;top:-4px;bottom:-4px;border-left:2px dashed var(--muted);opacity:.5;}
+      rgba(224,83,61,.16) 5px,rgba(224,83,61,.16) 10px);}
   .barcap{display:flex;justify-content:space-between;font-size:12px;margin-top:6px;}
-  .cap-keep b{color:var(--keep);} .cap-erode b{color:var(--erode);}
-  .scale{position:relative;height:16px;margin-top:4px;color:var(--muted);font-size:10.5px;}
-  .scale span{position:absolute;transform:translateX(-50%);}
+  .cap-k b{color:var(--custom);} .cap-e b{color:var(--erode);}
 
-  .takeaways{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px;}
-  @media(max-width:720px){.takeaways{grid-template-columns:1fr}}
-  .tk{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--keep);
-    border-radius:10px;padding:14px 16px;}
-  .tk.erode{border-left-color:var(--erode);}
-  .tk.good{border-left-color:var(--good);}
-  .tk h3{font-size:13.5px;margin:0 0 5px;}
-  .tk p{font-size:12.5px;color:var(--muted);margin:0;}
+  /* monthly column chart */
+  .cols{display:flex;align-items:flex-end;gap:10px;height:170px;padding:6px 4px 0;position:relative;}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;}
+  .col .colbar{width:100%;max-width:56px;background:linear-gradient(var(--custom),var(--custom));
+    border-radius:6px 6px 0 0;position:relative;transition:height .3s;}
+  .col .cv{font-size:11.5px;font-weight:650;} .col .cm{font-size:11px;color:var(--muted);}
+  .plateau{position:absolute;left:4px;right:4px;border-top:2px dashed var(--brok);}
+  .plateau span{position:absolute;right:0;top:-16px;font-size:10.5px;color:var(--brok);font-weight:600;}
 
-  .yt{width:100%;border-collapse:collapse;margin:8px 0 22px;font-size:13.5px;}
-  .yt th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
-    color:var(--muted);font-weight:600;padding:8px 12px;border-bottom:1px solid var(--line);}
-  .yt th:first-child{text-align:left;}
-  .yt td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:right;
-    font-variant-numeric:tabular-nums;}
-  .yt td:first-child{text-align:left;font-weight:600;}
-  .yt tr.target td{background:rgba(224,83,61,.07);}
-  .yt tr.target td:first-child{color:var(--erode);}
-  .yt .pos{color:var(--good);font-weight:600;}
-  .yt .big{color:var(--erode);font-weight:700;}
-  .foot{margin-top:26px;font-size:12px;color:var(--muted);line-height:1.65;
-    border-top:1px solid var(--line);padding-top:14px;}
-  .foot b{color:var(--ink);}
+  /* interactive dial */
+  .dial{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:22px 24px;box-shadow:var(--shadow);}
+  .dialtop{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;}
+  .dialtop .q{font-size:15px;font-weight:650;}
+  .bpct{font-size:34px;font-weight:800;color:var(--brok);font-variant-numeric:tabular-nums;}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:6px;
+    background:linear-gradient(90deg,var(--custom),var(--brok));margin:18px 0 6px;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+    background:#fff;border:3px solid var(--brok);box-shadow:0 2px 6px rgba(0,0,0,.25);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;
+    border:3px solid var(--brok);cursor:pointer;}
+  .scaleticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);}
+  .presets{display:flex;gap:8px;margin:14px 0 6px;flex-wrap:wrap;}
+  .preset{font:600 12px inherit;padding:6px 12px;border-radius:20px;border:1px solid var(--line);
+    background:var(--track);color:var(--ink2);cursor:pointer;}
+  .preset:hover{border-color:var(--brok);color:var(--ink);}
+  .preset.on{background:var(--brok);border-color:var(--brok);color:#fff;}
+  .outs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px;}
+  @media(max-width:600px){.outs{grid-template-columns:1fr 1fr}}
+  .out{background:var(--track);border:1px solid var(--line);border-radius:11px;padding:14px 14px;}
+  .out .ol{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+  .out .ov{font-size:23px;font-weight:750;margin-top:5px;font-variant-numeric:tabular-nums;line-height:1.05;}
+  .out .os{font-size:11px;color:var(--muted);margin-top:3px;}
+  .out.gp .ov{color:var(--good);} .out.cap .ov{color:var(--erode);}
+  .dialnote{font-size:12.5px;color:var(--ink2);margin:18px 0 0;line-height:1.6;}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+    font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);}
+  th:first-child{text-align:left;}
+  td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;}
+  td:first-child{text-align:left;font-weight:600;}
+  tr.hl td{background:rgba(217,138,43,.09);}
+  tr.tgt td{background:rgba(224,83,61,.07);} tr.tgt td:first-child{color:var(--erode);}
+  .pos{color:var(--good);font-weight:600;} .big{color:var(--erode);font-weight:700;}
+  .tbl{overflow-x:auto;}
+
+  /* takeaways */
+  .tk{border-left:3px solid var(--custom);}
+  .tk.e{border-left-color:var(--erode);} .tk.g{border-left-color:var(--good);}
+  .tk h3{font-size:14px;margin:0 0 6px;} .tk p{font-size:12.5px;color:var(--ink2);margin:0;}
+
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:1.7;}
+  .foot b{color:var(--ink2);}
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <header>
-    <h1>Cabinet Division — Custom vs Brokered Margin</h1>
-    <div class="sub">The two lines behave differently. The blend hides it. Here's what each one actually keeps.</div>
-    <div class="src">Actual gross margins per Bryan Kline (FEO), numbers through May 2026 · GM = (Revenue − COGS) / Revenue</div>
+    <div class="kicker">Cabinet Division · Finance + Airtable</div>
+    <h1>Margin, Mix &amp; the 3-Year Outlook</h1>
+    <p class="lede">Custom and brokered are two different businesses under one revenue line. Here's what each
+      actually earns, where the numbers have been, and how the road to the 3-year target changes with the
+      brokered mix.</p>
+    <div class="src">Gross margins per Bryan Kline (FEO), through May 2026 · revenue &amp; mix from GGOB P&amp;L (4010C / 4020C) and Airtable · GM = (Revenue − COGS) / Revenue</div>
   </header>
 
-  <div class="cards">
-    <div class="card">
-      <span class="code">4010C</span>
-      <span class="tag">Custom — built in-house</span>
-      <div class="big">20.4%</div>
-      <div class="gmlbl">actual gross margin</div>
-      <div class="mult">Priced at a <b>1.48×</b> multiplier → implies <b>~32.4%</b> if it held.</div>
-    </div>
-    <div class="card">
-      <span class="code">4020C</span>
-      <span class="tag">Brokered — resold</span>
-      <div class="big">12.5%</div>
-      <div class="gmlbl">actual gross margin</div>
-      <div class="mult">Priced at <b>1.45–1.65×</b> → implies <b>~31–39%</b> if it held.</div>
-    </div>
+  <!-- HERO STAT STRIP -->
+  <div class="grid4">
+    <div class="card stat"><div class="yr">2025 actual</div><div class="v num">$1.68M</div><div class="d">full year · ~$140K/mo</div></div>
+    <div class="card stat"><div class="yr">2026 projected</div><div class="v num">$2.26M</div><div class="d"><span class="up">+35%</span> · ~$206K/mo plateau</div></div>
+    <div class="card stat"><div class="yr">2027 projected</div><div class="v num">$2.51M</div><div class="d"><span class="up">+11%</span> · pipeline-dependent</div></div>
+    <div class="card stat tgt"><div class="yr">2028 target</div><div class="v num">$4.725M</div><div class="d"><b class="big">+88%</b> · Buddy / bottleneck report</div></div>
   </div>
 
-  <h2>What we price for vs. what we keep</h2>
-  <div class="panel">
-    <div class="legend">
-      <span><i class="sw keep"></i> Gross margin we keep</span>
-      <span><i class="sw erode"></i> Erosion — priced for, not realized</span>
-      <span><i style="border-left:2px dashed var(--muted);width:0;height:11px;opacity:.6"></i> Priced-for margin</span>
-    </div>
-
-    <!-- scale 0..40% ; bar width maps % / 40 * 100 -->
-    <div class="row">
-      <div class="rlbl">
-        <span class="rname">Custom (4010C)</span>
-        <span class="rnote">1.48× multiplier</span>
+  <!-- TWO MARGINS -->
+  <section>
+    <div class="slabel">Two products, two margins</div>
+    <div class="grid2">
+      <div class="card pcard c">
+        <span class="code">4010C</span><span class="tag">Custom — built in-house</span>
+        <div class="big num">20.4%</div><div class="gl">actual gross margin</div>
+        <div class="mult">Priced at <b>1.48×</b> → implies <b>~32.4%</b> if it held. Labor-intensive; every dollar rides through the shop.</div>
       </div>
-      <div class="bar">
-        <div class="fill" style="width:51%"></div>              <!-- 20.4/40 -->
-        <div class="gap" style="left:51%;width:30%"></div>       <!-- 20.4→32.4 -->
-        <div class="tick" style="left:81%"></div>                <!-- 32.4/40 -->
-      </div>
-      <div class="barcap">
-        <span class="cap-keep">Keeps <b>20.4%</b></span>
-        <span class="cap-erode">Loses <b>~12 pts</b> vs. priced 32.4%</span>
+      <div class="card pcard b">
+        <span class="code">4020C</span><span class="tag">Brokered — resold</span>
+        <div class="big num">12.5%</div><div class="gl">actual gross margin</div>
+        <div class="mult">Priced at <b>1.45–1.65×</b> → implies <b>~31–39%</b>. Pass-through; ~0 shop hours, but freight &amp; handling eat the margin.</div>
       </div>
     </div>
 
-    <div class="row">
-      <div class="rlbl">
-        <span class="rname">Brokered (4020C)</span>
-        <span class="rnote">1.45–1.65× multiplier</span>
+    <div class="card" style="margin-top:16px;">
+      <div style="font-weight:650;font-size:13.5px;margin-bottom:4px;">What we price for vs. what we keep</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Solid = margin kept · hatched = erosion between quote and reality · scale 0–40%</div>
+      <div class="row">
+        <div class="rlbl"><span class="rname">Custom (4010C)</span><span class="rnote">1.48× multiplier</span></div>
+        <div class="bar"><div class="fill" style="width:51%;background:var(--custom)"></div><div class="gap" style="left:51%;width:30%"></div></div>
+        <div class="barcap"><span class="cap-k">Keeps <b>20.4%</b></span><span class="cap-e">Loses <b>~12 pts</b> vs priced 32.4%</span></div>
       </div>
-      <div class="bar">
-        <div class="fill" style="width:31.25%"></div>            <!-- 12.5/40 -->
-        <div class="gap" style="left:31.25%;width:57.25%"></div> <!-- 12.5→35.4 (mid) -->
-        <div class="tick" style="left:88.5%"></div>              <!-- 35.4/40 -->
-      </div>
-      <div class="barcap">
-        <span class="cap-keep">Keeps <b>12.5%</b></span>
-        <span class="cap-erode">Loses <b>~18–27 pts</b> vs. priced ~31–39%</span>
-      </div>
-    </div>
-
-    <div class="scale">
-      <span style="left:0">0%</span>
-      <span style="left:25%">10%</span>
-      <span style="left:50%">20%</span>
-      <span style="left:75%">30%</span>
-      <span style="left:100%">40%</span>
-    </div>
-  </div>
-
-  <h2>What it means</h2>
-  <div class="takeaways">
-    <div class="tk good">
-      <h3>Custom is the better lane</h3>
-      <p>20.4% vs 12.5% — custom out-margins brokered by ~8 points. Every point of mix shifted toward custom lifts the blended margin.</p>
-    </div>
-    <div class="tk erode">
-      <h3>We leak between quote and reality</h3>
-      <p>Both lines keep far less than they're priced for. Custom bleeds ~12 pts; brokered ~18–27. The gap — not the price — is where the margin goes.</p>
-    </div>
-    <div class="tk">
-      <h3>The brokered gap is the bigger one</h3>
-      <p>Resale should be clean margin, yet it keeps the least. Freight, handling, receiving and damage are eating it. Worth a hard look before we lean on brokered to scale.</p>
-    </div>
-  </div>
-
-  <h2>How it fits — last year, this year, next year, and the target</h2>
-  <div class="panel">
-    <p style="margin:0 0 6px;font-size:13.5px;color:var(--muted);">
-      Buddy's 3-year target is <b style="color:var(--ink)">$4.725M</b> (set by the bottleneck report).
-      Here's the cabinet division year over year in real numbers — with gross profit at today's
-      <b style="color:var(--ink)">~71% custom / 29% brokered</b> mix (18.1% blended, on the full-cost margins above):
-    </p>
-    <table class="yt">
-      <thead><tr><th>Year</th><th>Cabinet revenue</th><th>YoY growth</th><th>Gross profit*</th><th>% of target</th></tr></thead>
-      <tbody>
-        <tr><td>2025 &nbsp;actual</td><td>$1.68M</td><td>—</td><td>$304K</td><td>36%</td></tr>
-        <tr><td>2026 &nbsp;projected</td><td>$2.26M</td><td class="pos">+35%</td><td>$409K</td><td>48%</td></tr>
-        <tr><td>2027 &nbsp;projected</td><td>$2.51M</td><td class="pos">+11%</td><td>$454K</td><td>53%</td></tr>
-        <tr class="target"><td>2028 &nbsp;target</td><td>$4.725M</td><td class="big">+88%</td><td>$856K</td><td>100%</td></tr>
-      </tbody>
-    </table>
-    <p style="margin:0 0 12px;font-size:12.5px;color:var(--muted);">Same trajectory, scaled against the $4.725M target:</p>
-
-    <!-- trajectory: scale to 4.725M = 100% -->
-    <div class="row">
-      <div class="rlbl"><span class="rname">2025 actual</span><span class="rnote">$1.68M</span></div>
-      <div class="bar"><div class="fill" style="width:35.6%;background:#8aa0b8"></div></div>
-    </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">2026 projected</span><span class="rnote">$2.26M &nbsp;<span style="opacity:.7">(range $1.98–2.58M)</span></span></div>
-      <div class="bar"><div class="fill" style="width:47.8%;background:#5b86c4"></div></div>
-    </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">2027 projected</span><span class="rnote">$2.51M &nbsp;<span style="opacity:.7">(directional — pipeline-dependent)</span></span></div>
-      <div class="bar"><div class="fill" style="width:53.1%;background:var(--keep)"></div></div>
-    </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname" style="color:var(--erode)">2028 target (Buddy)</span><span class="rnote"><b style="color:var(--erode)">$4.725M</b></span></div>
-      <div class="bar">
-        <div class="fill" style="width:100%;background:repeating-linear-gradient(135deg,rgba(224,83,61,.22),rgba(224,83,61,.22) 6px,transparent 6px,transparent 12px);border:1px solid var(--erode)"></div>
+      <div class="row">
+        <div class="rlbl"><span class="rname">Brokered (4020C)</span><span class="rnote">1.45–1.65× multiplier</span></div>
+        <div class="bar"><div class="fill" style="width:31.25%;background:var(--brok)"></div><div class="gap" style="left:31.25%;width:57.25%"></div></div>
+        <div class="barcap"><span class="cap-k" style="--custom:var(--brok)">Keeps <b style="color:var(--brok)">12.5%</b></span><span class="cap-e">Loses <b>~18–27 pts</b> vs priced ~31–39%</span></div>
       </div>
     </div>
-    <p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);">
-      <b style="color:var(--ink)">Where it fits and where it doesn't:</b> revenue has grown steadily — <b style="color:var(--ink)">+35%</b> then <b style="color:var(--ink)">+11%</b>. The step that breaks the trend is <b style="color:var(--ink)">2027 → 2028: +88%</b>, nearly doubling in two years. That jump is the plant-capacity question, not a sales-as-usual number.
-      <br><span style="font-size:11px;">*Gross profit held at today's ~71/29 mix (18.1% blended). At the target, the mix itself becomes the swing — next.</span>
-    </p>
-  </div>
+  </section>
 
-  <h2>"$4.725M of what?" — gross profit at the target, by mix</h2>
-  <div class="panel">
-    <p style="margin:0 0 4px;font-size:13.5px;color:var(--muted);">
-      Same $4.725M top line. Using the real margins (custom 20.4%, brokered 12.5%), the gross profit
-      swings <b style="color:var(--ink)">~$373K</b> on mix alone — and the higher-margin lane, custom, is exactly the one that needs finishing capacity.
-    </p>
-    <div class="legend"><span><i class="sw keep"></i> Gross profit at $4.725M revenue</span></div>
+  <!-- PAST & CURRENT -->
+  <section>
+    <div class="slabel">Past &amp; current — how we got here</div>
+    <div class="grid2" style="align-items:stretch;">
+      <div class="card">
+        <div style="font-weight:650;font-size:13.5px;">2026 monthly revenue</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Climbed off a flat Jan/Feb into a ~$206K/mo plateau since March.</div>
+        <div class="cols">
+          <div class="plateau" style="bottom:80%;"><span>~$206K plateau</span></div>
+          <div class="col"><div class="cv num">$90K</div><div class="colbar" style="height:37%"></div><div class="cm">Jan</div></div>
+          <div class="col"><div class="cv num">$90K</div><div class="colbar" style="height:37%"></div><div class="cm">Feb</div></div>
+          <div class="col"><div class="cv num">$199K</div><div class="colbar" style="height:83%"></div><div class="cm">Mar</div></div>
+          <div class="col"><div class="cv num">$222K</div><div class="colbar" style="height:92%"></div><div class="cm">Apr</div></div>
+          <div class="col"><div class="cv num">$185K</div><div class="colbar" style="height:77%"></div><div class="cm">May</div></div>
+          <div class="col"><div class="cv num">$220K</div><div class="colbar" style="height:92%"></div><div class="cm">Jun</div></div>
+        </div>
+      </div>
 
-    <!-- GP by mix; scale to all-custom $963.9K = 100% -->
-    <div class="row">
-      <div class="rlbl"><span class="rname">All custom (20.4%)</span><span class="rnote">needs the most finishing capacity</span></div>
-      <div class="bar"><div class="fill" style="width:100%"></div></div>
-      <div class="barcap"><span class="cap-keep">GP <b>$963.9K</b></span></div>
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <div style="font-weight:650;font-size:13.5px;">The mix swings hard, month to month</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px;">Brokered share of cabinet revenue — pass-through that uses almost no shop capacity.</div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div class="out" style="flex:1;"><div class="ol">Jan–May brokered</div><div class="ov num" style="color:var(--brok)">28.8%</div><div class="os">$226K of $785K</div></div>
+          <div class="out" style="flex:1;"><div class="ol">June brokered</div><div class="ov num" style="color:var(--brok)">1.6%</div><div class="os">$3.6K of $220K</div></div>
+        </div>
+        <div style="font-size:12.5px;color:var(--ink2);line-height:1.6;border-top:1px solid var(--line);padding-top:12px;">
+          Because brokered carries no labor, it quietly flatters every blended metric. A high-brokered month looks
+          efficient; a big custom month like <b style="color:var(--ink)">June (98.4% custom)</b> looks worse on paper
+          even while it earns more. <b style="color:var(--ink)">The blend hides which business we're actually running.</b>
+        </div>
+      </div>
     </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">75% custom / 25% brokered</span><span class="rnote">18.4% blended</span></div>
-      <div class="bar"><div class="fill" style="width:90.3%"></div></div>
-      <div class="barcap"><span class="cap-keep">GP <b>$870.6K</b></span></div>
+    <div class="card" style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
+      <div><div class="ol" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">2025 → 2026 monthly avg</div>
+        <div style="font-size:19px;font-weight:700;margin-top:4px;" class="num">$140K → $206K <span class="pos" style="font-size:14px;">+47%</span></div></div>
+      <div><div class="ol" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Est. break-even (blended)</div>
+        <div style="font-size:19px;font-weight:700;margin-top:4px;" class="num">~$220K/mo <span style="font-size:13px;color:var(--muted)">($186–220K by mix)</span></div></div>
+      <div><div class="ol" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">Where we sit</div>
+        <div style="font-size:19px;font-weight:700;margin-top:4px;">At / just over the line — profitable when custom-heavy</div></div>
     </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">~71% / 29% — today's mix</span><span class="rnote">Jan–May actual split</span></div>
-      <div class="bar"><div class="fill" style="width:88.8%"></div></div>
-      <div class="barcap"><span class="cap-keep">GP <b>$855.7K</b></span></div>
+  </section>
+
+  <!-- FUTURE OUTLOOK — INTERACTIVE DIAL -->
+  <section>
+    <div class="slabel">Future outlook — the brokered dial</div>
+    <div class="dial">
+      <div class="dialtop">
+        <div class="q">At the <b>$4.725M</b> target, if brokered is…</div>
+        <div class="bpct"><span id="bval">29</span>%</div>
+      </div>
+      <input type="range" id="slider" min="0" max="50" value="29" step="1">
+      <div class="scaleticks"><span>0% all custom</span><span>25%</span><span>50% brokered-heavy</span></div>
+      <div class="presets">
+        <button class="preset" data-v="0">All custom</button>
+        <button class="preset on" data-v="29">Today's mix (29%)</button>
+        <button class="preset" data-v="40">Lean brokered (40%)</button>
+        <button class="preset" data-v="50">Half &amp; half</button>
+      </div>
+      <div class="outs">
+        <div class="out"><div class="ol">Blended margin</div><div class="ov num" id="oBlend">18.1%</div><div class="os">custom 20.4% / brok 12.5%</div></div>
+        <div class="out gp"><div class="ol">Gross profit</div><div class="ov num" id="oGP">$856K</div><div class="os">on $4.725M revenue</div></div>
+        <div class="out cap"><div class="ol">Custom to build</div><div class="ov num" id="oCustom">$3.36M</div><div class="os">the part needing shop capacity</div></div>
+        <div class="out"><div class="ol">Capacity needed</div><div class="ov num" id="oMult">2.1×</div><div class="os">vs 2026 custom output (~$1.6M)</div></div>
+      </div>
+      <p class="dialnote" id="dnote"></p>
     </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">50% / 50%</span><span class="rnote">16.5% blended</span></div>
-      <div class="bar"><div class="fill" style="width:80.6%"></div></div>
-      <div class="barcap"><span class="cap-keep">GP <b>$777.3K</b></span></div>
+
+    <div class="card tbl" style="margin-top:16px;">
+      <div style="font-weight:650;font-size:13.5px;margin-bottom:10px;">Reference — the target at fixed brokered levels</div>
+      <table>
+        <thead><tr><th>Brokered %</th><th>Blended margin</th><th>Gross profit</th><th>Custom to build</th><th>Capacity vs 2026</th></tr></thead>
+        <tbody>
+          <tr><td>0% — all custom</td><td>20.4%</td><td class="num">$964K</td><td class="num">$4.73M</td><td class="num">2.95×</td></tr>
+          <tr><td>15%</td><td>19.2%</td><td class="num">$908K</td><td class="num">$4.02M</td><td class="num">2.51×</td></tr>
+          <tr class="hl"><td>29% — today's mix</td><td>18.1%</td><td class="num">$856K</td><td class="num">$3.36M</td><td class="num">2.10×</td></tr>
+          <tr><td>40%</td><td>17.2%</td><td class="num">$815K</td><td class="num">$2.84M</td><td class="num">1.77×</td></tr>
+          <tr><td>50% — brokered-heavy</td><td>16.5%</td><td class="num">$777K</td><td class="num">$2.36M</td><td class="num">1.48×</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="row">
-      <div class="rlbl"><span class="rname">All brokered (12.5%)</span><span class="rnote">needs ~no shop capacity</span></div>
-      <div class="bar"><div class="fill" style="width:61.3%"></div></div>
-      <div class="barcap"><span class="cap-keep">GP <b>$590.6K</b></span></div>
+  </section>
+
+  <!-- YEAR BY YEAR -->
+  <section>
+    <div class="slabel">Year by year — how the target fits</div>
+    <div class="card tbl">
+      <table>
+        <thead><tr><th>Year</th><th>Cabinet revenue</th><th>YoY growth</th><th>Gross profit*</th><th>% of target</th></tr></thead>
+        <tbody>
+          <tr><td>2025 &nbsp;actual</td><td class="num">$1.68M</td><td>—</td><td class="num">$304K</td><td class="num">36%</td></tr>
+          <tr><td>2026 &nbsp;projected</td><td class="num">$2.26M</td><td class="pos">+35%</td><td class="num">$409K</td><td class="num">48%</td></tr>
+          <tr><td>2027 &nbsp;projected</td><td class="num">$2.51M</td><td class="pos">+11%</td><td class="num">$454K</td><td class="num">53%</td></tr>
+          <tr class="tgt"><td>2028 &nbsp;target</td><td class="num">$4.725M</td><td class="big">+88%</td><td class="num">$856K</td><td class="num">100%</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12.5px;color:var(--ink2);margin:14px 4px 0;line-height:1.6;">
+        Revenue grows steadily — <b style="color:var(--ink)">+35%</b> then <b style="color:var(--ink)">+11%</b>. The step that breaks the trend is
+        <b style="color:var(--ink)">2027 → 2028: +88%</b>, nearly doubling in two years. That's not a sales-as-usual number — it's the plant-capacity decision.
+        <br><span style="font-size:11px;color:var(--muted);">*Gross profit at today's ~71/29 mix (18.1% blended). Change the mix on the dial above and the target's gross profit moves ~$186K.</span>
+      </p>
     </div>
-    <p style="margin:14px 0 0;font-size:12.5px;color:var(--muted);">
-      <b style="color:var(--ink)">The strategic fork:</b> lean on brokered and $4.725M is reachable with little plant investment — but it earns the least and builds nothing. Lean on custom and it earns ~$373K more, but only if we build the finishing capacity to make it. The target and the capacity plan are the same decision.
-    </p>
-  </div>
+  </section>
+
+  <!-- TAKEAWAYS -->
+  <section>
+    <div class="slabel">What it means</div>
+    <div class="grid3">
+      <div class="card tk g"><h3>Custom is the better lane</h3><p>20.4% vs 12.5% — custom out-margins brokered by ~8 points. Every point of mix toward custom lifts the blended margin.</p></div>
+      <div class="card tk e"><h3>The 88% jump is capacity, not sales</h3><p>Steady +11–35% growth, then a near-double to hit $4.725M. Reaching it on custom means roughly <b>2–3× today's shop output</b>.</p></div>
+      <div class="card tk"><h3>Mix and capacity are one decision</h3><p>Lean brokered → reachable with little plant investment, but ~$777K GP and builds nothing. Lean custom → ~$964K GP, but only if we build finishing capacity.</p></div>
+    </div>
+  </section>
 
   <div class="foot">
-    <b>One assumption to confirm before this goes wider:</b> these margins appear to be
-    <b>full-cost</b> (production labor included, plus freight/handling on brokered) — which is why
-    they land well below a materials-only view. If that's right, the erosion on custom is essentially
-    the shop's rework and overruns showing up on the P&amp;L. Bryan — that's the number I most want you
-    to poke at. Next step: rebuild the blended break-even as <b>(custom rev × 20.4%) + (brokered rev × 12.5%)</b>
-    against the real custom-vs-brokered revenue mix.
+    <b>One assumption to confirm before this goes wider:</b> these margins look like <b>full-cost</b> (production labor
+    included, plus freight/handling on brokered) — which is why they sit well below a materials-only view. If that's right,
+    the custom erosion is essentially the shop's rework and overruns landing on the P&amp;L. Bryan — that's the number to poke at.
     <br><br>
-    <span style="font-size:11px;">Forecast basis: 2025 actual = GGOB Dec month-end ($1.68M). 2026 = scenario base ($2.26M; range $1.98–2.58M). 2027 = Apr–Jun run-rate held ($2.51M; directional, pipeline-dependent). 2028 = Buddy's 3-yr target ($4.725M) from the bottleneck report. GP-by-mix applies custom 20.4% / brokered 12.5% to $4.725M.</span>
+    <b>Basis.</b> Margins: Bryan Kline, through May 2026 (custom 20.4%, brokered 12.5%). Revenue: 2025 = GGOB Dec month-end ($1.68M);
+    2026 = scenario base ($2.26M, range $1.98–2.58M); 2027 = Apr–Jun run-rate held ($2.51M, directional, pipeline-dependent);
+    2028 = Buddy's 3-yr target ($4.725M) from the bottleneck report. Monthly 2026 revenue and the 28.8% / 1.6% brokered shares are
+    Finance actuals (4010C / 4020C). Gross profit applies the margins at the stated mix; "capacity vs 2026" indexes custom revenue
+    to ~$1.6M of 2026 custom output.
   </div>
 </div>
+
+<script>
+  var REV = 4725000, CM = 0.204, BM = 0.125, BASE_CUSTOM_2026 = 1600000;
+  var slider = document.getElementById('slider');
+  var presets = document.querySelectorAll('.preset');
+
+  function money(n){
+    if(n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    return '$' + Math.round(n/1e3) + 'K';
+  }
+  function render(b){
+    var frac = b/100;
+    var blended = CM*(1-frac) + BM*frac;
+    var gp = REV*blended;
+    var custom = REV*(1-frac);
+    var mult = custom/BASE_CUSTOM_2026;
+    document.getElementById('bval').textContent = b;
+    document.getElementById('oBlend').textContent = (blended*100).toFixed(1) + '%';
+    document.getElementById('oGP').textContent = money(gp);
+    document.getElementById('oCustom').textContent = money(custom);
+    document.getElementById('oMult').textContent = mult.toFixed(2) + '×';
+    var lean = b <= 10
+      ? 'earns the <b>most</b> gross profit, but demands the <b>most</b> shop capacity — near 3× today.'
+      : (b >= 40
+        ? 'is <b>easier to reach</b> with little plant investment, but earns the <b>least</b> and builds no capacity.'
+        : 'is the current path — a middle ground on both margin and the capacity we’d have to add.');
+    document.getElementById('dnote').innerHTML =
+      'At <b>' + b + '% brokered</b>, $4.725M throws off <b style="color:var(--good)">' + money(gp) +
+      '</b> of gross profit and requires building <b style="color:var(--erode)">' + money(custom) +
+      '</b> of custom (' + mult.toFixed(1) + '× 2026 output). This mix ' + lean;
+    presets.forEach(function(p){ p.classList.toggle('on', +p.dataset.v === b); });
+  }
+  slider.addEventListener('input', function(){ render(+slider.value); });
+  presets.forEach(function(p){
+    p.addEventListener('click', function(){ slider.value = p.dataset.v; render(+p.dataset.v); });
+  });
+  render(29);
+</script>
 </body>
 </html>
