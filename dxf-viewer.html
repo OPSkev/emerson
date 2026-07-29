@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EF San Juan — DXF Viewer</title>
+<style>
+  :root{ --bg:#1e1e24; --panel:#26262e; --line:#3a3a46; --text:#e8e6df; --muted:#9a988f; --accent:#e8921a; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100%}
+  header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header .brand{font-weight:700;letter-spacing:.5px;margin-right:6px;white-space:nowrap}
+  header .brand span{color:var(--accent)}
+  button,label.btn{background:#33333d;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+  button:hover,label.btn:hover{background:#3f3f4b}
+  button.on{background:var(--accent);color:#111;border-color:var(--accent);font-weight:700}
+  .sep{width:1px;height:24px;background:var(--line);margin:0 2px}
+  .stat{font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  #main{flex:1;display:flex;min-height:0}
+  #side{width:210px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:10px;font-size:13px}
+  #side h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  .layer{display:flex;align-items:center;gap:7px;padding:4px 2px;cursor:pointer;border-radius:5px}
+  .layer:hover{background:#30303a}
+  .layer .sw{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid #0006}
+  .layer .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .layer.off{opacity:.4;text-decoration:line-through}
+  #stage{flex:1;position:relative;min-width:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #drop{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:var(--muted);pointer-events:none;text-align:center;padding:20px}
+  #drop .big{font-size:20px;color:var(--text)}
+  #drop.hide{display:none}
+  #drop.dragover{background:#e8921a22;border:3px dashed var(--accent);pointer-events:auto}
+  #readout{position:absolute;left:10px;bottom:10px;font-size:12px;color:var(--muted);background:#0007;padding:4px 8px;border-radius:6px;pointer-events:none}
+  #err{position:absolute;left:10px;top:10px;right:10px;background:#7a2222;color:#fff;padding:8px 12px;border-radius:8px;font-size:13px;display:none}
+  input[type=file]{display:none}
+  @media print{ header,#side,#drop,#readout{display:none} #app,#main,#stage{height:auto} canvas{width:100%!important;height:auto!important} }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">E.F. San Juan <span>DXF Viewer</span></div>
+    <label class="btn" for="file">📂 Open DXF</label>
+    <input id="file" type="file" accept=".dxf">
+    <button id="sample">Load Sample</button>
+    <div class="sep"></div>
+    <button id="fit">Fit</button>
+    <button id="zin">＋</button>
+    <button id="zout">－</button>
+    <button id="measure">📏 Measure</button>
+    <button id="bg">◐ Background</button>
+    <button id="print">🖨 Print</button>
+    <div class="stat" id="stat">No file loaded</div>
+  </header>
+  <div id="main">
+    <div id="side">
+      <h3>Layers</h3>
+      <div id="layers"><div style="color:var(--muted)">—</div></div>
+    </div>
+    <div id="stage">
+      <canvas id="c"></canvas>
+      <div id="drop" class="">
+        <div class="big">Drop a .dxf file here</div>
+        <div>or use <b>Open DXF</b> above — then scroll to zoom, drag to pan</div>
+        <div>Try <b>Load Sample</b> to see how it works</div>
+      </div>
+      <div id="err"></div>
+      <div id="readout"></div>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const canvas=$("c"), ctx=canvas.getContext("2d");
+let DL=[];            // display list of primitives (world coords)
+let layers={};        // name -> {color, on}
+let bbox=null;        // {minx,miny,maxx,maxy}
+let view={s:1,ox:0,oy:0};
+let dark=true;
+let units="units";
+let measureMode=false, measurePts=[];
+let fileName="";
+
+// ---------- ACI color palette (common indices) ----------
+const ACI={1:"#ff0000",2:"#ffff00",3:"#00ff00",4:"#00ffff",5:"#3355ff",6:"#ff00ff",
+  7:null,8:"#808080",9:"#c0c0c0",250:"#333333",251:"#5b5b5b",252:"#848484",253:"#adadad",254:"#d6d6d6",255:"#ffffff"};
+function colorFor(ent){
+  let ci=ent.color;
+  if(ci===undefined||ci===256||ci===0){ const L=layers[ent.layer]; ci=L?L.color:7; }
+  if(ci===7||ci==null) return dark?"#e8e6df":"#111";
+  if(ACI[ci]) return ACI[ci];
+  return dark?"#e8e6df":"#111";
+}
+
+// ---------- DXF parse ----------
+function parseDXF(text){
+  const lines=text.split(/\r\n|\r|\n/);
+  const pairs=[];
+  for(let i=0;i+1<lines.length;i+=2){
+    const code=parseInt(lines[i].trim(),10);
+    const val=lines[i+1];
+    if(!isNaN(code)) pairs.push([code, val]);
+  }
+  // split sections
+  const blocks={}; let entities=[]; layers={}; units="units";
+  let i=0;
+  function readEntities(stopType){ // returns array of raw entity objects until ENDSEC/ENDBLK
+    const out=[];
+    while(i<pairs.length){
+      let [c,v]=pairs[i];
+      if(c===0 && (v.trim()===stopType)) { return out; }
+      if(c===0){
+        const ent=readEntity();
+        if(ent) out.push(ent);
+      } else i++;
+    }
+    return out;
+  }
+  function readEntity(){
+    let [,type]=pairs[i]; type=type.trim(); i++;
+    const e={type, layer:"0"};
+    // We'll store multiple 10/20 for polylines/splines
+    const xs=[],ys=[],bulges=[];
+    let seqVertices=[];
+    while(i<pairs.length){
+      let [c,v]=pairs[i];
+      if(c===0){
+        if(type==="POLYLINE"){
+          // gather following VERTEX entities until SEQEND
+          while(i<pairs.length){
+            let [c2,v2]=pairs[i];
+            if(c2===0 && v2.trim()==="VERTEX"){
+              i++; const vx={};
+              while(i<pairs.length){ let [cc,vv]=pairs[i]; if(cc===0)break;
+                if(cc===10)vx.x=parseFloat(vv); else if(cc===20)vx.y=parseFloat(vv); else if(cc===42)vx.b=parseFloat(vv); i++; }
+              seqVertices.push(vx);
+            } else if(c2===0 && v2.trim()==="SEQEND"){ i++; while(i<pairs.length&&pairs[i][0]!==0)i++; break; }
+            else if(c2===0){ break; }
+            else i++;
+          }
+        }
+        break;
+      }
+      const val=v.trim();
+      switch(c){
+        case 8: e.layer=val; break;
+        case 62: e.color=parseInt(val,10); break;
+        case 10: xs.push(parseFloat(val)); break;
+        case 20: ys.push(parseFloat(val)); break;
+        case 11: e.x2=parseFloat(val); break;
+        case 21: e.y2=parseFloat(val); break;
+        case 40: e.r=parseFloat(val); e.h=parseFloat(val); break;
+        case 41: e.r2=parseFloat(val); break;
+        case 42: bulges.push(parseFloat(val)); break;
+        case 50: e.a1=parseFloat(val); e.rot=parseFloat(val); break;
+        case 51: e.a2=parseFloat(val); break;
+        case 70: e.flags=parseInt(val,10); break;
+        case 1: e.text=v.replace(/^\s/,''); break;
+        case 2: e.name=val; break;
+        case 44: break;
+      }
+      i++;
+    }
+    e.xs=xs; e.ys=ys; e.bulges=bulges;
+    if(seqVertices.length){ e.xs=seqVertices.map(p=>p.x); e.ys=seqVertices.map(p=>p.y); e.bulges=seqVertices.map(p=>p.b||0); }
+    return e;
+  }
+
+  // walk top-level sections
+  while(i<pairs.length){
+    const [c,v]=pairs[i];
+    if(c===0 && v.trim()==="SECTION"){
+      i++; const secName=(pairs[i]&&pairs[i][0]===2)?pairs[i][1].trim():""; i++;
+      if(secName==="ENTITIES"){ entities=readEntities("ENDSEC"); }
+      else if(secName==="BLOCKS"){
+        while(i<pairs.length){
+          let [cc,vv]=pairs[i];
+          if(cc===0 && vv.trim()==="ENDSEC"){break;}
+          if(cc===0 && vv.trim()==="BLOCK"){
+            i++; let bname="";
+            while(i<pairs.length && pairs[i][0]!==0){ if(pairs[i][0]===2)bname=pairs[i][1].trim(); i++; }
+            const bents=readEntities("ENDBLK");
+            blocks[bname]=bents;
+            if(pairs[i]&&pairs[i][0]===0)i++; // consume ENDBLK
+            while(i<pairs.length&&pairs[i][0]!==0)i++;
+          } else i++;
+        }
+      }
+      else if(secName==="TABLES"){
+        while(i<pairs.length){
+          let [cc,vv]=pairs[i];
+          if(cc===0 && vv.trim()==="ENDSEC"){break;}
+          if(cc===0 && vv.trim()==="LAYER"){
+            i++; let ln="",lc=7;
+            while(i<pairs.length && pairs[i][0]!==0){ if(pairs[i][0]===2)ln=pairs[i][1].trim(); if(pairs[i][0]===62)lc=Math.abs(parseInt(pairs[i][1],10)); i++; }
+            if(ln)layers[ln]={color:lc,on:true};
+          } else i++;
+        }
+      }
+      else if(secName==="HEADER"){
+        while(i<pairs.length){
+          let [cc,vv]=pairs[i];
+          if(cc===0 && vv.trim()==="ENDSEC"){break;}
+          if(cc===9 && vv.trim()==="$INSUNITS"){ i++; if(pairs[i]&&pairs[i][0]===70){ const u=parseInt(pairs[i][1],10); units=({1:"in",2:"ft",4:"mm",5:"cm",6:"m"})[u]||"units"; } }
+          i++;
+        }
+      }
+      else { while(i<pairs.length && !(pairs[i][0]===0 && pairs[i][1].trim()==="ENDSEC")) i++; }
+    } else i++;
+  }
+  return {entities, blocks};
+}
+
+// ---------- entity -> primitives (world coords) ----------
+function bulgePts(x1,y1,x2,y2,b,seg){
+  if(!b) return [[x1,y1],[x2,y2]];
+  const theta=4*Math.atan(Math.abs(b));
+  const dist=Math.hypot(x2-x1,y2-y1); if(dist===0)return[[x1,y1]];
+  const radius=dist/(2*Math.sin(theta/2));
+  const gamma=(Math.PI-theta)/2;
+  let ang=Math.atan2(y2-y1,x2-x1)+(b>0?gamma:-gamma);
+  const cx=x1+radius*Math.cos(ang), cy=y1+radius*Math.sin(ang);
+  let a1=Math.atan2(y1-cy,x1-cx), a2=Math.atan2(y2-cy,x2-cx);
+  if(b>0){ if(a2<a1)a2+=2*Math.PI; } else { if(a2>a1)a2-=2*Math.PI; }
+  const n=Math.max(6,Math.ceil(seg*Math.abs(a2-a1)/Math.PI)); const pts=[];
+  for(let k=0;k<=n;k++){ const t=a1+(a2-a1)*k/n; pts.push([cx+radius*Math.cos(t),cy+radius*Math.sin(t)]); }
+  return pts;
+}
+function tf(t,x,y){ // apply transform {tx,ty,sx,sy,rot}
+  if(!t) return [x,y];
+  const c=Math.cos(t.rot),s=Math.sin(t.rot);
+  const X=x*t.sx, Y=y*t.sy;
+  return [t.tx + X*c - Y*s, t.ty + X*s + Y*c];
+}
+function emit(ent,t,blocks,out,depth){
+  const color=colorFor(ent), layer=ent.layer;
+  const P=(x,y)=>tf(t,x,y);
+  switch(ent.type){
+    case "LINE": if(ent.xs.length){ out.push({type:"poly",pts:[P(ent.xs[0],ent.ys[0]),P(ent.x2,ent.y2)],color,layer}); } break;
+    case "LWPOLYLINE": case "POLYLINE": {
+      const pts=[]; const n=ent.xs.length;
+      for(let k=0;k<n;k++){
+        const nx=(k+1<n)?k+1:0; const b=ent.bulges[k]||0;
+        if(k<n-1 || (ent.flags&1)){
+          const seg=bulgePts(ent.xs[k],ent.ys[k],ent.xs[nx],ent.ys[nx],b,20);
+          for(const p of seg) pts.push(P(p[0],p[1]));
+        } else pts.push(P(ent.xs[k],ent.ys[k]));
+      }
+      out.push({type:"poly",pts,color,layer,closed:!!(ent.flags&1)}); break;
+    }
+    case "CIRCLE": { const c=P(ent.xs[0],ent.ys[0]); out.push({type:"circle",cx:c[0],cy:c[1],r:ent.r*(t?t.sx:1),color,layer}); break; }
+    case "ARC": {
+      const cx=ent.xs[0],cy=ent.ys[0],r=ent.r; const pts=[];
+      let a1=ent.a1*Math.PI/180, a2=ent.a2*Math.PI/180; if(a2<a1)a2+=2*Math.PI;
+      const n=Math.max(8,Math.ceil(40*(a2-a1)/(2*Math.PI)));
+      for(let k=0;k<=n;k++){ const a=a1+(a2-a1)*k/n; pts.push(P(cx+r*Math.cos(a),cy+r*Math.sin(a))); }
+      out.push({type:"poly",pts,color,layer}); break;
+    }
+    case "ELLIPSE": {
+      const cx=ent.xs[0],cy=ent.ys[0], mx=ent.x2||0,my=ent.y2||0, ratio=ent.r||1;
+      const major=Math.hypot(mx,my), rot=Math.atan2(my,mx), minor=major*ratio;
+      let s=ent.r2!==undefined?ent.r2:0, e=ent.a2!==undefined?0:0;
+      let sp=0, ep=2*Math.PI; const pts=[];
+      const n=64; for(let k=0;k<=n;k++){ const a=sp+(ep-sp)*k/n;
+        const ex=major*Math.cos(a), ey=minor*Math.sin(a);
+        const rx=ex*Math.cos(rot)-ey*Math.sin(rot), ry=ex*Math.sin(rot)+ey*Math.cos(rot);
+        pts.push(P(cx+rx,cy+ry)); }
+      out.push({type:"poly",pts,color,layer}); break;
+    }
+    case "POINT": { const c=P(ent.xs[0],ent.ys[0]); out.push({type:"circle",cx:c[0],cy:c[1],r:1,color,layer,dot:true}); break; }
+    case "SPLINE": {
+      const pts=[]; for(let k=0;k<ent.xs.length;k++) pts.push(P(ent.xs[k],ent.ys[k]));
+      if(pts.length>1) out.push({type:"poly",pts,color,layer}); break;
+    }
+    case "TEXT": case "MTEXT": {
+      if(ent.text){ const c=P(ent.xs[0],ent.ys[0]); out.push({type:"text",x:c[0],y:c[1],h:(ent.h||2.5)*(t?t.sx:1),rot:(ent.rot||0),text:ent.text.replace(/\\[A-Za-z0-9|]+;?/g,'').replace(/[{}]/g,''),color,layer}); }
+      break;
+    }
+    case "INSERT": {
+      if(depth>6) break;
+      const blk=blocks[ent.name]; if(!blk) break;
+      const ip=P(ent.xs[0]||0, ent.ys[0]||0);
+      const nt={tx:ip[0],ty:ip[1], sx:(t?t.sx:1)*(ent.r2||1), sy:(t?t.sy:1)*(ent.r2||1), rot:(t?t.rot:0)+((ent.rot||0)*Math.PI/180)};
+      // note: ent.r holds first 40? For INSERT 41/42 are scales; we approximated with r2 (41). fallback 1.
+      for(const be of blk) emit(be,nt,blocks,out,depth+1);
+      break;
+    }
+  }
+}
+function buildDisplayList(parsed){
+  const out=[];
+  for(const e of parsed.entities) emit(e,null,parsed.blocks,out,0);
+  return out;
+}
+
+// ---------- bbox / view ----------
+function computeBBox(dl){
+  let minx=1e18,miny=1e18,maxx=-1e18,maxy=-1e18,any=false;
+  const upd=(x,y)=>{ if(!isFinite(x)||!isFinite(y))return; any=true; if(x<minx)minx=x; if(y<miny)miny=y; if(x>maxx)maxx=x; if(y>maxy)maxy=y; };
+  for(const p of dl){
+    if(p.type==="poly") for(const q of p.pts) upd(q[0],q[1]);
+    else if(p.type==="circle"){ upd(p.cx-p.r,p.cy-p.r); upd(p.cx+p.r,p.cy+p.r); }
+    else if(p.type==="text") upd(p.x,p.y);
+  }
+  return any?{minx,miny,maxx,maxy}:null;
+}
+function fit(){
+  if(!bbox)return;
+  const w=canvas.width,h=canvas.height, pad=40;
+  const bw=Math.max(bbox.maxx-bbox.minx,1e-6), bh=Math.max(bbox.maxy-bbox.miny,1e-6);
+  const s=Math.min((w-2*pad)/bw,(h-2*pad)/bh);
+  view.s=s;
+  view.ox=(w-(bbox.minx+bbox.maxx)*s)/2;
+  view.oy=(h+(bbox.miny+bbox.maxy)*s)/2; // +h then flip
+  draw();
+}
+function w2s(x,y){ return [x*view.s+view.ox, -y*view.s+view.oy]; }
+function s2w(px,py){ return [(px-view.ox)/view.s, -(py-view.oy)/view.s]; }
+
+// ---------- draw ----------
+function draw(){
+  const w=canvas.width,h=canvas.height;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle=dark?"#1e1e24":"#ffffff";
+  ctx.fillRect(0,0,w,h);
+  ctx.lineWidth=1;
+  for(const p of DL){
+    const L=layers[p.layer]; if(L&&!L.on) continue;
+    ctx.strokeStyle=p.color; ctx.fillStyle=p.color;
+    if(p.type==="poly"){
+      if(p.pts.length<2)continue;
+      ctx.beginPath();
+      for(let k=0;k<p.pts.length;k++){ const s=w2s(p.pts[k][0],p.pts[k][1]); k?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1]); }
+      if(p.closed)ctx.closePath();
+      ctx.stroke();
+    } else if(p.type==="circle"){
+      const c=w2s(p.cx,p.cy), r=Math.abs(p.r*view.s);
+      ctx.beginPath(); ctx.arc(c[0],c[1],Math.max(r,0.5),0,2*Math.PI);
+      if(p.dot){ctx.fill();} else ctx.stroke();
+    } else if(p.type==="text"){
+      const c=w2s(p.x,p.y), fs=Math.abs(p.h*view.s);
+      if(fs<3)continue;
+      ctx.save(); ctx.translate(c[0],c[1]); ctx.rotate(-p.rot*Math.PI/180);
+      ctx.font=fs+"px sans-serif"; ctx.textBaseline="bottom"; ctx.fillText(p.text,0,0); ctx.restore();
+    }
+  }
+  // measure overlay
+  if(measurePts.length){
+    ctx.strokeStyle="#e8921a"; ctx.fillStyle="#e8921a"; ctx.lineWidth=1.5;
+    for(const mp of measurePts){ const s=w2s(mp[0],mp[1]); ctx.beginPath();ctx.arc(s[0],s[1],4,0,2*Math.PI);ctx.fill(); }
+    if(measurePts.length===2){
+      const a=w2s(measurePts[0][0],measurePts[0][1]), b=w2s(measurePts[1][0],measurePts[1][1]);
+      ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+      const d=Math.hypot(measurePts[1][0]-measurePts[0][0], measurePts[1][1]-measurePts[0][1]);
+      const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+      const label=d.toFixed(3)+" "+units;
+      ctx.font="13px sans-serif"; const tw=ctx.measureText(label).width;
+      ctx.fillStyle="#000c"; ctx.fillRect(mid[0]-tw/2-5,mid[1]-20,tw+10,18);
+      ctx.fillStyle="#e8921a"; ctx.textBaseline="middle"; ctx.textAlign="center"; ctx.fillText(label,mid[0],mid[1]-11); ctx.textAlign="left";
+    }
+  }
+}
+
+// ---------- layers panel ----------
+function renderLayers(){
+  const box=$("layers"); box.innerHTML="";
+  const names=Object.keys(layers).sort();
+  if(!names.length){ box.innerHTML='<div style="color:var(--muted)">(default)</div>'; return; }
+  for(const nm of names){
+    const L=layers[nm];
+    const sw=ACI[L.color]||(dark?"#e8e6df":"#111");
+    const row=document.createElement("div"); row.className="layer"+(L.on?"":" off");
+    row.innerHTML=`<span class="sw" style="background:${sw}"></span><span class="nm">${nm}</span>`;
+    row.onclick=()=>{ L.on=!L.on; row.classList.toggle("off",!L.on); draw(); };
+    box.appendChild(row);
+  }
+}
+
+// ---------- load ----------
+function loadText(text,name){
+  try{
+    $("err").style.display="none";
+    const parsed=parseDXF(text);
+    // ensure layers referenced exist
+    DL=buildDisplayList(parsed);
+    for(const p of DL){ if(!layers[p.layer]) layers[p.layer]={color:7,on:true}; }
+    bbox=computeBBox(DL);
+    fileName=name||"drawing.dxf";
+    $("drop").classList.add("hide");
+    $("stat").textContent=`${fileName} · ${DL.length} objects · ${Object.keys(layers).length} layers · units: ${units}`;
+    renderLayers();
+    resize(); fit();
+    if(!bbox){ showErr("File parsed but no drawable geometry was found (unsupported entity types)."); }
+  }catch(e){ showErr("Could not read this DXF: "+e.message); }
+}
+function showErr(m){ const el=$("err"); el.textContent=m; el.style.display="block"; }
+
+// ---------- interactions ----------
+function resize(){ const r=$("stage").getBoundingClientRect(); canvas.width=r.width; canvas.height=r.height; draw(); }
+window.addEventListener("resize",()=>{ resize(); });
+$("file").onchange=e=>{ const f=e.target.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>loadText(rd.result,f.name); rd.readAsText(f); };
+$("fit").onclick=fit;
+$("zin").onclick=()=>{ zoomAt(canvas.width/2,canvas.height/2,1.25); };
+$("zout").onclick=()=>{ zoomAt(canvas.width/2,canvas.height/2,0.8); };
+$("bg").onclick=()=>{ dark=!dark; // recolor primitives that used default
+  DL.forEach(p=>{}); // colors recomputed only for defaults; simplest: rebuild not needed, default handled at draw? colors are baked. Rebuild:
+  if(lastParsed){ DL=buildDisplayList(lastParsed); for(const p of DL){ if(!layers[p.layer]) layers[p.layer]={color:7,on:true}; } }
+  renderLayers(); draw(); };
+$("print").onclick=()=>window.print();
+$("measure").onclick=()=>{ measureMode=!measureMode; measurePts=[]; $("measure").classList.toggle("on",measureMode); $("readout").textContent=measureMode?"Measure: click two points":""; draw(); };
+$("sample").onclick=()=>loadText(SAMPLE,"sample.dxf");
+
+let lastParsed=null;
+const _load=loadText;
+loadText=function(t,n){ lastParsed=parseDXF(t); _load(t,n); };
+
+function zoomAt(px,py,f){
+  const before=s2w(px,py);
+  view.s*=f;
+  const after=s2w(px,py);
+  view.ox+=(after[0]-before[0])*view.s;  // keep point stationary
+  view.oy-=(after[1]-before[1])*view.s;
+  draw();
+}
+canvas.addEventListener("wheel",e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect(); zoomAt(e.clientX-r.left,e.clientY-r.top, e.deltaY<0?1.12:0.89); },{passive:false});
+let drag=null;
+canvas.addEventListener("pointerdown",e=>{
+  const r=canvas.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  if(measureMode){ const wp=s2w(px,py); if(measurePts.length>=2)measurePts=[]; measurePts.push(wp); draw(); return; }
+  drag={px,py,ox:view.ox,oy:view.oy}; canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove",e=>{
+  const r=canvas.getBoundingClientRect(), px=e.clientX-r.left, py=e.clientY-r.top;
+  const wp=s2w(px,py); $("readout").textContent=(measureMode?"Measure: click two points   ":"")+`x: ${wp[0].toFixed(2)}  y: ${wp[1].toFixed(2)} ${units}`;
+  if(drag){ view.ox=drag.ox+(px-drag.px); view.oy=drag.oy+(py-drag.py); draw(); }
+});
+canvas.addEventListener("pointerup",e=>{ drag=null; });
+// drag-drop
+const stage=$("stage"), dropEl=$("drop");
+["dragenter","dragover"].forEach(ev=>stage.addEventListener(ev,e=>{e.preventDefault();dropEl.classList.remove("hide");dropEl.classList.add("dragover");}));
+["dragleave","drop"].forEach(ev=>stage.addEventListener(ev,e=>{e.preventDefault();dropEl.classList.remove("dragover");}));
+stage.addEventListener("drop",e=>{ const f=e.dataTransfer.files[0]; if(f){ const rd=new FileReader(); rd.onload=()=>loadText(rd.result,f.name); rd.readAsText(f);} });
+
+// ---------- embedded sample ----------
+const SAMPLE=`0
+SECTION
+2
+HEADER
+9
+$INSUNITS
+70
+1
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+0
+LWPOLYLINE
+8
+CABINET
+90
+5
+70
+1
+10
+0
+20
+0
+10
+24
+20
+0
+10
+24
+20
+30
+10
+0
+20
+30
+10
+0
+20
+0
+0
+CIRCLE
+8
+HARDWARE
+62
+1
+10
+6
+20
+15
+40
+0.5
+0
+CIRCLE
+8
+HARDWARE
+62
+1
+10
+18
+20
+15
+40
+0.5
+0
+ARC
+8
+DETAIL
+62
+3
+10
+12
+20
+30
+40
+6
+50
+0
+51
+180
+0
+LINE
+8
+DETAIL
+10
+0
+20
+22
+11
+24
+21
+22
+0
+TEXT
+8
+TEXT
+62
+2
+10
+4
+20
+10
+40
+2
+1
+BASE CABINET B24
+0
+ENDSEC
+0
+EOF`;
+resize();
+</script>
+</body>
+</html>
