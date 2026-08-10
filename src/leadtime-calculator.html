@@ -57,11 +57,8 @@
 
   <div class="grid">
     <div class="panel">
-      <label>Mode</label>
-      <div class="seg">
-        <button id="mFwd" class="on" onclick="setMode('fwd')">Forward from release</button>
-        <button id="mBack" onclick="setMode('back')">Back-calc from ship</button>
-      </div>
+      <label>The date I know is&hellip;</label>
+      <select id="anchorStep"></select>
 
       <label id="dateLabel">Job Released date</label>
       <input type="date" id="theDate">
@@ -103,17 +100,35 @@ const STEPS = [
   {name:'Production / Finishing', lvl:{1:2,2:4,3:6}},
 ];
 const TOTAL = {1:9, 2:14, 3:19};
-let mode='fwd', level=2;
+
+// Any milestone the user might already know. `at` = step boundary
+// (0 = Job Released, 6 = Production Complete).
+const ANCHORS = [
+  {label:'Job Released', at:0},
+  {label:'Engineering starts', at:1},
+  {label:'CAD / Millwork Drawings start', at:2},
+  {label:'Work Order created', at:3},
+  {label:'Material ordering starts', at:4},
+  {label:'Production starts (Production Ready)', at:5},
+  {label:'Production Complete (ship)', at:6},
+];
+let anchorIdx=5, level=2;
 
 function wks(s){ return s.fixed!=null ? s.fixed : s.lvl[level]; }
+
+// Weeks from Job Released to a given step boundary.
+function offsetWeeks(at){
+  let w=0;
+  for(let i=0;i<at;i++) w += wks(STEPS[i]);
+  return w;
+}
 function addWeeks(d,w){ const x=new Date(d); x.setDate(x.getDate()+w*7); return x; }
 function fmt(d){ return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
 function today0(){ const t=new Date(); t.setHours(0,0,0,0); return t; }
 
-function setMode(m){ mode=m;
-  document.getElementById('mFwd').classList.toggle('on',m==='fwd');
-  document.getElementById('mBack').classList.toggle('on',m==='back');
-  document.getElementById('dateLabel').textContent = m==='fwd' ? 'Job Released date' : 'Target ship date (Production Complete)';
+function setAnchor(i){ anchorIdx=+i;
+  document.getElementById('dateLabel').textContent =
+    ANCHORS[anchorIdx].label.replace(/ \(.*\)$/,'') + ' date';
   render();
 }
 function setLvl(l){ level=l;
@@ -126,26 +141,30 @@ function render(){
   const rows=document.getElementById('rows'), verdict=document.getElementById('verdict');
   if(!val){ rows.innerHTML=''; verdict.innerHTML='<div class="verdict note"><p>Pick a date to calculate.</p></div>'; return; }
   const total=TOTAL[level];
-  // release date: given (fwd) or derived (back)
+  // Back out Job Released from whichever milestone the user entered.
   const base=new Date(val+'T00:00:00');
-  const release = mode==='fwd' ? base : addWeeks(base, -total);
+  const anchorAt=ANCHORS[anchorIdx].at;
+  const release = addWeeks(base, -offsetWeeks(anchorAt));
 
   // build milestone rows
   let cum=0, html='';
-  html += `<tr class="gate"><td>Job Released</td><td class="w">0</td><td class="d">${fmt(release)}</td></tr>`;
-  for(const s of STEPS){
+  const mark = i => i===anchorAt ? ' style="background:rgba(124,140,255,.14)"' : '';
+  html += `<tr class="gate"${mark(0)}><td>Job Released</td><td class="w">0</td><td class="d">${fmt(release)}</td></tr>`;
+  STEPS.forEach((s,i)=>{
     cum += wks(s);
     const d=addWeeks(release,cum);
-    const cls = s.gate ? '' : '';
-    html += `<tr><td>${s.name}${s.gate?' <span class="fx">· production-ready gate</span>':''}</td>`+
+    // this step's completion is also the next step's start boundary (i+1);
+    // boundary 6 is shown on the dedicated ship row below, so don't mark it twice
+    html += `<tr${i+1===STEPS.length?'':mark(i+1)}><td>${s.name}${s.gate?' <span class="fx">· production-ready gate</span>':''}</td>`+
             `<td class="w">${cum}</td><td class="d">${fmt(d)}</td></tr>`;
-  }
+  });
   const ship=addWeeks(release,total);
-  html += `<tr class="done"><td>Production Complete (ship)</td><td class="w">${total}</td><td class="d">${fmt(ship)}</td></tr>`;
+  html += `<tr class="done"${mark(STEPS.length)}><td>Production Complete (ship)</td><td class="w">${total}</td><td class="d">${fmt(ship)}</td></tr>`;
   rows.innerHTML=html;
 
-  // verdict
-  if(mode==='fwd'){
+  // verdict: if they gave us Job Released, it's a straight forward projection.
+  // Any other anchor means Job Released is derived — check whether it's still reachable.
+  if(anchorAt===0){
     verdict.className='';
     verdict.innerHTML=`<div class="verdict ok"><h2>Ships ${fmt(ship)}</h2>
       <p>Level ${level} · ${total} weeks from Job Released. Best case, capacity permitting.</p></div>`;
@@ -153,8 +172,8 @@ function render(){
     const t=today0();
     const days=Math.round((release-t)/86400000);
     let cls,h,p;
-    if(days<0){ cls='hot'; h=`Impossible — needed to release ${Math.abs(days)} days ago`;
-      p=`To ship ${fmt(ship)} at Level ${level} (${total} wks), Job Released had to happen by ${fmt(release)}. That date is past. Move the ship date or escalate.`; }
+    if(days<0){ cls='hot'; h=`Behind — Job Released needed to happen ${Math.abs(days)} days ago`;
+      p=`To hit ${ANCHORS[anchorIdx].label} on ${fmt(base)} at Level ${level} (${total} wks total, ships ${fmt(ship)}), Job Released had to happen by ${fmt(release)}. That date is past — the timeline is already compressed.`; }
     else if(days<=14){ cls='warn'; h=`Tight — release by ${fmt(release)} (${days} days)`;
       p=`Only ${days} days of slack to get to Job Released (contract, deposit, field-dim, color, hardware). Any delay pushes the ship.`; }
     else { cls='ok'; h=`Achievable — release by ${fmt(release)}`;
@@ -163,9 +182,19 @@ function render(){
   }
 }
 
+// build the anchor dropdown
+const sel=document.getElementById('anchorStep');
+ANCHORS.forEach((a,i)=>{
+  const o=document.createElement('option');
+  o.value=i; o.textContent=a.label;
+  if(i===anchorIdx) o.selected=true;
+  sel.appendChild(o);
+});
+sel.addEventListener('change',e=>setAnchor(e.target.value));
+
 // default date = today
 document.getElementById('theDate').valueAsDate=new Date();
 document.getElementById('theDate').addEventListener('change',render);
-render();
+setAnchor(anchorIdx);
 </script>
 </div></body></html>
