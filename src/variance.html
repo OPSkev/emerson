@@ -1,0 +1,124 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Schedule Variance — actual vs forecast</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e6e9ef; --dim:#9aa3b2; --mono:'SFMono-Regular',Consolas,monospace;
+    --hot:#ff5d5d; --warn:#ffb043; --note:#5da9ff; --ok:#3ecf8e;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt);
+    font:15px/1.45 -apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:1320px; margin:0 auto; padding:28px 22px 60px; }
+  header { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:4px; }
+  h1 { font-size:23px; margin:0; letter-spacing:-.3px; }
+  .sub { color:var(--dim); font-size:13px; }
+  .gen { color:var(--dim); font-size:12px; margin:2px 0 22px; }
+  .stats { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:12px 18px; min-width:96px; }
+  .stat .n { font-size:26px; font-weight:700; }
+  .stat .l { font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; }
+  .stat.hot .n { color:var(--hot); } .stat.warn .n { color:var(--warn); }
+  .stat.ok .n { color:var(--ok); }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--dim);
+    margin:26px 0 12px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-left-width:4px;
+    border-radius:9px; padding:13px 15px; }
+  .card.hot { border-left-color:var(--hot); }
+  .card.warn { border-left-color:var(--warn); }
+  .card-wo { font-family:var(--mono); font-size:12px; color:var(--dim); }
+  .card-name { font-weight:600; margin:1px 0 6px; }
+  .card-job { font-weight:400; color:var(--dim); font-size:12.5px; font-family:inherit; }
+  .big { font-size:19px; font-weight:700; margin-bottom:7px; }
+  .big .vs { font-size:12.5px; font-weight:400; color:var(--dim); }
+  .flag { display:block; font-size:12.5px; padding:3px 0; }
+  .flag.f3 { color:var(--hot); } .flag.f2 { color:var(--warn); }
+  .flag.f1 { color:var(--note); } .flag.f0 { color:var(--dim); }
+  .bar { position:relative; height:9px; background:var(--panel2); border-radius:5px;
+    margin:5px 0 7px; overflow:visible; }
+  .bar span { display:block; height:100%; border-radius:5px; }
+  .bar .b-ok { background:var(--ok); }
+  .bar .b-warn { background:var(--warn); }
+  .bar .b-hot { background:var(--hot); }
+  .bar i { position:absolute; top:-3px; width:2px; height:15px; background:var(--txt);
+    opacity:.85; border-radius:1px; }
+  table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13.5px; }
+  th { text-align:left; color:var(--dim); font-weight:600; font-size:11px;
+    text-transform:uppercase; letter-spacing:.4px; padding:8px 8px;
+    border-bottom:1px solid var(--line); }
+  td { padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  td.c { text-align:center; white-space:nowrap; }
+  .mono { font-family:var(--mono); font-size:12.5px; }
+  tr.r3 { background:rgba(255,93,93,.07); }
+  tr.r2 { background:rgba(255,176,67,.06); }
+  .ok { color:var(--ok); } .bad { color:var(--hot); } .fx { color:var(--dim); }
+  .tag { font-size:10px; background:var(--panel2); color:var(--dim); padding:1px 6px;
+    border-radius:4px; white-space:nowrap; display:inline-block; margin:1px 0; }
+  .flagcell { font-size:12px; max-width:210px; }
+  .tablewrap { overflow-x:auto; background:var(--panel); border:1px solid var(--line);
+    border-radius:11px; padding:6px 12px 12px; }
+  .allclear { color:var(--ok); padding:14px; background:var(--panel); border-radius:9px;
+    border:1px solid var(--line); }
+  .note { background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--note);
+    border-radius:9px; padding:12px 15px; font-size:13px; color:var(--dim); margin-bottom:8px; }
+  footer { margin-top:30px; color:var(--dim); font-size:12px; line-height:1.7; }
+  code { background:var(--panel2); padding:1px 5px; border-radius:4px; font-size:12px; }
+</style></head>
+<body><div class="wrap">
+  <header>
+    <h1>Schedule Variance</h1>
+    <span class="sub">what's actually done vs what the build-out forecast</span>
+  </header>
+  <div class="gen">
+    Tue Aug 25, 2026 · hour-weighted from WO Step durations and the daily % Complete entries ·
+    measured against a <b>frozen baseline</b> (2 day(s) of history recorded)
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">22</div><div class="l">Rooms measured</div></div>
+    <div class="stat hot"><div class="n">1</div><div class="l">Seriously behind</div></div>
+    <div class="stat warn"><div class="n">2</div><div class="l">Behind plan</div></div>
+    <div class="stat ok"><div class="n">6</div><div class="l">On / ahead</div></div>
+    <div class="stat"><div class="n">14</div><div class="l">Not started yet</div></div>
+    <div class="stat"><div class="n">16</div><div class="l">Shop hours owed</div></div>
+    <div class="stat"><div class="n">2,086</div><div class="l">Hours in flight</div></div>
+  </div>
+
+  <h2>Behind plan — worst first</h2>
+  <div class="cards"><div class="card hot"><div class="card-wo">C11834C8 <span class="card-job">C11834 - Anzalone Residence</span></div><div class="card-name">Custom Cabinetry - Replacement Door - N/A</div><div class="big">0% <span class="vs">vs 45% planned</span></div><div class="bar"><span class="b-hot" style="width:0.0%"></span><i style="left:44.8%"></i></div><span class="flag f3">1 days behind the released plan</span><span class="flag f2">1 step(s) past their baseline finish, 2 hrs of work owed</span><span class="flag f0">Build Doors/Drawer Fronts — 1d late, 2 hrs, 0% done</span></div></div>
+
+  <h2>Every active room</h2>
+  <div class="tablewrap"><table>
+    <thead><tr>
+      <th>Job</th><th>WO</th><th>Room</th><th class="c">Hrs</th><th>Progress</th>
+      <th class="c">Actual</th><th class="c">Planned</th><th class="c">Var</th>
+      <th class="c">Calendar</th><th class="c">7-day</th><th class="c">vs today's dates</th><th>Notes</th>
+    </tr></thead>
+    <tbody><tr class="r3"><td>C11834 - Anzalone Residence</td><td class="mono">C11834C8</td><td>Custom Cabinetry - Replacement Door - N/A</td><td class="c">4</td><td style="min-width:150px"><div class="bar"><span class="b-hot" style="width:0.0%"></span><i style="left:44.8%"></i></div></td><td class="c">0%</td><td class="c">45%</td><td class="c bad">-45%</td><td class="c"><span class="bad">1d late</span></td><td class="c"><span class="fx">—</span></td><td class="c">45%</td><td class="flagcell"></td></tr><tr class="r2"><td>C12554 - Morrison Residence</td><td class="mono">C12554C11</td><td>Laundry</td><td class="c">154</td><td style="min-width:150px"><div class="bar"><span class="b-warn" style="width:29.2%"></span><i style="left:35.8%"></i></div></td><td class="c">29%</td><td class="c">36%</td><td class="c bad">-7%</td><td class="c"><span class="bad">1d late</span></td><td class="c"><span class="fx">—</span></td><td class="c">36%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C14</td><td>Custom Cabinetry - Bedroom 2 Window Seat</td><td class="c">120</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:96.8%"></span><i style="left:100.0%"></i></div></td><td class="c">97%</td><td class="c">100%</td><td class="c ">-3%</td><td class="c"><span class="bad">1d late</span></td><td class="c"><span class="fx">—</span></td><td class="c">100%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C6</td><td>Foyer 2 _ 1st Floor</td><td class="c">158</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:2.8%"></span><i style="left:2.8%"></i></div></td><td class="c">3%</td><td class="c">3%</td><td class="c ">-0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">3%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr><tr class=""><td>C12389 - Martha Retreat</td><td class="mono">C12389C25</td><td>Custom Cabinetry - Pool House Vestibule - EFSJ Inset</td><td class="c">63</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12389 - Martha Retreat</td><td class="mono">C12389C27</td><td>Custom Cabinetry - Pool House Powder Bath - EFSJ Inset</td><td class="c">43</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12389 - Martha Retreat</td><td class="mono">C12389C28</td><td>Custom Cabinetry - Exercise Room - EFSJ Full Overlay</td><td class="c">39</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12508 - Hungerford Residence</td><td class="mono">C12508C1</td><td>Kitchen</td><td class="c">262</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12508 - Hungerford Residence</td><td class="mono">C12508C9</td><td>Office</td><td class="c">124</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C1</td><td>PH 2 Kitchen</td><td class="c">166</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C12</td><td>PH 2 2nd Floor- Common Room Wet Bar</td><td class="c">67</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C3</td><td>PH 2 Ground Floor - Pool Bath</td><td class="c">182</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C4</td><td>PH 2 First Floor- Pantry</td><td class="c">121</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C5</td><td>Custom Cabinetry - Great Room_1st Floor - EFSJ Inset</td><td class="c">143</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C7</td><td>PH 2 First Floor-Powder Bath</td><td class="c">21</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C9</td><td>PH 2 First Floor-Bedroom 1 Sitting Area</td><td class="c">93</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>CM3921 - 50 East Saint Lucia Lane (Walker)</td><td class="mono">CM3921C1</td><td>Custom Cabinetry - Master Bath - EFSJ Inset</td><td class="c">60</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>CM3921 - 50 East Saint Lucia Lane (Walker)</td><td class="mono">CM3921C2</td><td>Master Closet</td><td class="c">42</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:0.0%"></span><i style="left:0.0%"></i></div></td><td class="c">0%</td><td class="c">0%</td><td class="c ">+0%</td><td class="c">on the day</td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">not started — plan agrees</span></td></tr><tr class=""><td>C12389 - Martha Retreat</td><td class="mono">C12389C26</td><td>Custom Cabinetry - Pool House Changing Room - EFSJ Inset</td><td class="c">23</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:3.6%"></span><i style="left:0.0%"></i></div></td><td class="c">4%</td><td class="c">0%</td><td class="c ok">+4%</td><td class="c"><span class="ok">3d ahead</span></td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C16</td><td>Custom Cabinetry - 2nd Floor Bath 3</td><td class="c">20</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:29.9%"></span><i style="left:16.7%"></i></div></td><td class="c">30%</td><td class="c">17%</td><td class="c ok">+13%</td><td class="c"><span class="ok">2d ahead</span></td><td class="c"><span class="fx">—</span></td><td class="c">17%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C2</td><td>Custom Cabinetry - Outdoor Living Room</td><td class="c">55</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:14.9%"></span><i style="left:0.0%"></i></div></td><td class="c">15%</td><td class="c">0%</td><td class="c ok">+15%</td><td class="c"><span class="ok">2d ahead</span></td><td class="c"><span class="fx">—</span></td><td class="c">0%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr><tr class=""><td>C12554 - Morrison Residence</td><td class="mono">C12554C8</td><td>1st Floor Bath 1 (Master)</td><td class="c">127</td><td style="min-width:150px"><div class="bar"><span class="b-ok" style="width:71.5%"></span><i style="left:36.9%"></i></div></td><td class="c">72%</td><td class="c">37%</td><td class="c ok">+35%</td><td class="c"><span class="ok">8d ahead</span></td><td class="c"><span class="fx">—</span></td><td class="c">37%</td><td class="flagcell"><span class="tag">new baseline</span></td></tr></tbody>
+  </table></div>
+  <div class="gen">
+    <b>Planned</b> = against the frozen baseline dates. <b>vs today's dates</b> = against the
+    step dates as they stand in Airtable right now. When those two disagree, the schedule
+    has been moved — the gap is the rescheduling, not the progress.
+    <b>Calendar</b> = how many days ago the baseline plan expected today's actual number.
+    <b>7-day</b> = whether the room gained or lost ground this week.
+  </div>
+
+  <h2>Not measurable — 8 active room(s) with no step hours</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Job</th><th>WO</th><th>Room</th><th class="c">Steps</th><th class="c">Status</th></tr></thead>
+    <tbody><tr><td>C10657 - 4204 Northshore Island Drive</td><td class="mono">C10657C16</td><td>Custom Cabinetry - Carriage House Kitchen Custom to Brokerage</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C12508 - Hungerford Residence</td><td class="mono">C12508C3</td><td>2nd Kitchen</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C12508 - Hungerford Residence</td><td class="mono">C12508C4</td><td>Master Closet</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C12508 - Hungerford Residence</td><td class="mono">C12508C8</td><td>Fireplace Built-Ins</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C12612 - Heins - Bass Residence</td><td class="mono">C12612C1</td><td>Custom Work On Brokerage Cabinetry - Kitchen (Island)</td><td class="c">16</td><td class="c">Not Started</td></tr><tr><td>C12612 - Heins - Bass Residence</td><td class="mono">C12612C2</td><td>Custom Work on Brokerage Cabinetry - Butler's Pantry</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C12612 - Heins - Bass Residence</td><td class="mono">C12612C3</td><td>Custom Work On Brokerage Cabinetry - Master Bath</td><td class="c">0</td><td class="c">Not Started</td></tr><tr><td>C13078 - Cabinet Shop Inventory</td><td class="mono">C13078C1</td><td>Custom Cabinetry - Inventory Orders</td><td class="c">0</td><td class="c">In Progress</td></tr></tbody>
+  </table></div>
+
+  <footer>
+    Baseline frozen in <code>baseline.json</code> — first time a step is seen, its Start/Finish
+    are recorded and never overwritten, so rescheduling can't hide a slip.
+    0 step(s) baselined on this run. 6 room(s) were baselined after work had
+    already started; their variance only counts from the baseline date forward.
+    Daily history in <code>history.json</code> drives the 7-day trend.
+    Refresh: <code>python variance.py</code>.
+  </footer>
+</div></body></html>
