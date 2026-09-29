@@ -24,6 +24,18 @@ li{margin:3px 0}
 .who td{padding:6px 10px 6px 0;vertical-align:top;border-bottom:1px solid var(--line)}
 .who{border-collapse:collapse;width:100%}
 .foot{color:var(--mute);font-size:.85rem;margin-top:28px}
+@page{size:letter;margin:.5in}
+@media print{
+:root{--bg:#fff;--card:#fff;--ink:#000;--mute:#444;--line:#bbb;--chip:#eee;--red:#b3261e;--amber:#8a5700;--green:#2e7d32}
+body{font-size:11pt;line-height:1.35;background:#fff}
+main{max-width:none;padding:0}
+h1{font-size:18pt}
+h2{font-size:12.5pt;margin:14px 0 6px;padding-bottom:3px;break-after:avoid}
+.sub{margin-bottom:8px}
+.card,.say{padding:6px 10px;margin-bottom:6px;break-inside:avoid}
+.say{border-left-width:3px}
+.foot{margin-top:12px}
+}
 </style>
 </head>
 <body>
