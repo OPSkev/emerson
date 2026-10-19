@@ -1,0 +1,7 @@
+# This repo is PUBLIC and publishes via GitHub Pages.
+# Only encrypted staticrypt output belongs here.
+# Plaintext sources live in the private repo OPSkev/emerson-sources.
+
+src/
+test.ps1
+*.env
